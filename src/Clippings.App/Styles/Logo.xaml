@@ -1,0 +1,40 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <DrawingImage x:Key="ClippingsMarkImage">
+        <DrawingImage.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="#2D6BF2">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,32,32" RadiusX="7" RadiusY="7" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <GeometryDrawing Brush="#BFD3FF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="6,7,18,17" RadiusX="3" RadiusY="3" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <GeometryDrawing Brush="#FFFFFF">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="9,10,17,15" RadiusX="3" RadiusY="3" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <GeometryDrawing Brush="#2D6BF2">
+                    <GeometryDrawing.Geometry>
+                        <PathGeometry Figures="M 11.5 23 L 15.5 17.5 L 19 21 L 21.5 18.5 L 24 21.5 L 24 23 Z" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+
+                <GeometryDrawing Brush="#FFC857">
+                    <GeometryDrawing.Geometry>
+                        <EllipseGeometry Center="21.2,14" RadiusX="1.5" RadiusY="1.5" />
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+</ResourceDictionary>

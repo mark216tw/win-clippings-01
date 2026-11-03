@@ -1,0 +1,175 @@
+<UserControl x:Class="Clippings.App.Views.HistoryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:helpers="clr-namespace:Clippings.App.Helpers"
+             xmlns:strings="clr-namespace:Clippings.App.Strings">
+
+    <UserControl.Resources>
+        <helpers:PathToImageConverter x:Key="PathToImage" />
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0">
+            <DockPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="最近擷取" Style="{StaticResource PageTitleStyle}" />
+                    <Border Background="{DynamicResource SurfaceAltBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Padding="9,2"
+                            Margin="10,0,0,0"
+                            VerticalAlignment="Center">
+                        <TextBlock x:Name="CountText" Style="{StaticResource CaptionStyle}" />
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal"
+                            DockPanel.Dock="Right"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center">
+                    <CheckBox x:Name="FavoriteFilter"
+                              Content="只看收藏"
+                              Margin="0,0,12,0"
+                              Checked="OnFilterChanged"
+                              Unchecked="OnFilterChanged" />
+                    <DockPanel Width="240" Margin="0,0,8,0">
+                        <Button x:Name="ClearSearchButton"
+                                DockPanel.Dock="Right"
+                                Content="×"
+                                Style="{StaticResource IconButtonStyle}"
+                                ToolTip="清除搜尋"
+                                Visibility="Collapsed"
+                                Click="OnClearSearchClick" />
+                        <Grid>
+                            <TextBox x:Name="SearchBox"
+                                     TextChanged="OnSearchTextChanged"
+                                     GotKeyboardFocus="OnSearchGotFocus"
+                                     LostKeyboardFocus="OnSearchLostFocus"
+                                     ToolTip="搜尋來源或檔名" />
+                            <TextBlock x:Name="SearchHint"
+                                       Text="搜尋來源或檔名"
+                                       Style="{StaticResource CaptionStyle}"
+                                       Margin="10,0,0,0"
+                                       VerticalAlignment="Center"
+                                       IsHitTestVisible="False" />
+                        </Grid>
+                    </DockPanel>
+                    <Button Content="重新整理"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Click="OnRefreshClick" />
+                    <Button x:Name="DeleteAllButton"
+                            Content="{x:Static strings:AppStrings.ActionDeleteAll}"
+                            ToolTip="{x:Static strings:AppStrings.DeleteAllCapturesToolTip}"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Margin="8,0,0,0"
+                            Click="OnDeleteAllClick" />
+                </StackPanel>
+            </DockPanel>
+
+            <TextBlock x:Name="StatusText" Style="{StaticResource CaptionStyle}" Margin="0,8,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,16,0,0">
+            <ListBox x:Name="ItemsList"
+                     ItemContainerStyle="{StaticResource CardListItemStyle}"
+                     MouseDoubleClick="OnItemDoubleClick"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                     ScrollViewer.CanContentScroll="False">
+                <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Border Style="{StaticResource CardBorderStyle}" Width="250" Margin="0,0,12,12" Padding="10">
+                            <StackPanel>
+                                <Border CornerRadius="8" Height="140" ClipToBounds="True" Background="{DynamicResource SurfaceAltBrush}">
+                                    <Image Source="{Binding ThumbnailPath, Converter={StaticResource PathToImage}, ConverterParameter=250}"
+                                           Stretch="Uniform" />
+                                </Border>
+
+                                <Grid Margin="2,10,2,0">
+                                    <StackPanel Margin="0,0,28,0">
+                                        <TextBlock Text="{Binding Source}"
+                                                   FontSize="13"
+                                                   FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding CreatedAt, StringFormat={}{0:MM-dd HH:mm}}"
+                                                   Style="{StaticResource CaptionStyle}"
+                                                   Margin="0,2,0,0" />
+                                    </StackPanel>
+
+                                    <Button HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Click="OnFavoriteClick"
+                                            ToolTip="收藏／取消收藏">
+                                        <Button.Style>
+                                            <Style TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
+                                                <Setter Property="Content" Value="☆" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+                                                        <Setter Property="Content" Value="★" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource FavoriteBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </Grid>
+
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Button Content="複製" Style="{StaticResource IconButtonStyle}" Click="OnCopyClick" />
+                                    <Button Content="編輯" Style="{StaticResource IconButtonStyle}" Click="OnEditClick" />
+                                    <Button Content="儲存" Style="{StaticResource IconButtonStyle}" Click="OnSaveClick" />
+                                    <Button Content="刪除" Style="{StaticResource IconButtonStyle}" Click="OnDeleteClick" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <TextBlock x:Name="EmptyState"
+                       Style="{StaticResource BodySecondaryStyle}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Center"
+                       Visibility="Collapsed"
+                       Text="還沒有任何擷取，按 Ctrl+Shift+X 開始吧。" />
+
+            <StackPanel x:Name="LoadingState"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        Visibility="Collapsed">
+                <ProgressBar Width="180" Height="4" IsIndeterminate="True" />
+                <TextBlock Text="正在載入擷取歷史…"
+                           Style="{StaticResource BodySecondaryStyle}"
+                           Margin="0,12,0,0"
+                           HorizontalAlignment="Center" />
+            </StackPanel>
+
+            <Border x:Name="ErrorState"
+                    Style="{StaticResource CardBorderStyle}"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    Visibility="Collapsed">
+                <StackPanel>
+                    <TextBlock Text="無法讀取擷取歷史，請稍後再試。"
+                               TextWrapping="Wrap" />
+                    <Button Content="重試"
+                            Style="{StaticResource SecondaryButtonStyle}"
+                            Margin="0,12,0,0"
+                            Click="OnRetryClick" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
+

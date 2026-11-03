@@ -1,0 +1,238 @@
+<UserControl x:Class="Clippings.App.Views.SettingsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+            <StackPanel MaxWidth="780" HorizontalAlignment="Left">
+            <TextBlock Text="設定" Style="{StaticResource PageTitleStyle}" />
+             <TextBlock Text="調整快捷鍵、擷取方式、儲存位置與外觀。"
+                        Style="{StaticResource BodySecondaryStyle}"
+                        Margin="0,4,0,20" />
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <CheckBox x:Name="StartupCheck" Content="開機時自動啟動（最小化到系統匣）" />
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="快捷鍵" Style="{StaticResource SectionTitleStyle}" />
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="120" />
+                            <ColumnDefinition Width="190" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Grid.Column="0" Text="區域擷取" VerticalAlignment="Center" Margin="0,0,0,10" />
+                        <TextBox Grid.Row="0" Grid.Column="1" x:Name="RegionHotkeyBox" Margin="0,0,0,10"
+                                 GotKeyboardFocus="OnHotkeyGotKeyboardFocus"
+                                 LostKeyboardFocus="OnHotkeyLostKeyboardFocus"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown" />
+                        <TextBlock Grid.Row="0" Grid.Column="2" x:Name="RegionHint"
+                                   Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Margin="10,0,0,10" />
+
+                        <TextBlock Grid.Row="1" Grid.Column="0" Text="全螢幕擷取" VerticalAlignment="Center" Margin="0,0,0,10" />
+                        <TextBox Grid.Row="1" Grid.Column="1" x:Name="FullScreenHotkeyBox" Margin="0,0,0,10"
+                                 GotKeyboardFocus="OnHotkeyGotKeyboardFocus"
+                                 LostKeyboardFocus="OnHotkeyLostKeyboardFocus"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown" />
+                        <TextBlock Grid.Row="1" Grid.Column="2" x:Name="FullScreenHint"
+                                   Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Margin="10,0,0,10" />
+
+                        <TextBlock Grid.Row="2" Grid.Column="0" Text="目前視窗擷取" VerticalAlignment="Center" Margin="0,0,0,10" />
+                        <TextBox Grid.Row="2" Grid.Column="1" x:Name="WindowHotkeyBox" Margin="0,0,0,10"
+                                 GotKeyboardFocus="OnHotkeyGotKeyboardFocus"
+                                 LostKeyboardFocus="OnHotkeyLostKeyboardFocus"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown" />
+                        <TextBlock Grid.Row="2" Grid.Column="2" x:Name="WindowHint"
+                                   Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Margin="10,0,0,10" />
+
+                        <TextBlock Grid.Row="3" Grid.Column="0" Text="延遲擷取" VerticalAlignment="Center" Margin="0,0,0,10" />
+                        <TextBox Grid.Row="3" Grid.Column="1" x:Name="DelayedHotkeyBox" Margin="0,0,0,10"
+                                 GotKeyboardFocus="OnHotkeyGotKeyboardFocus"
+                                 LostKeyboardFocus="OnHotkeyLostKeyboardFocus"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown" />
+                        <TextBlock Grid.Row="3" Grid.Column="2" x:Name="DelayedHint"
+                                   Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Margin="10,0,0,10" />
+
+                        <TextBlock Grid.Row="4" Grid.Column="0" Text="螢幕標註" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="4" Grid.Column="1" x:Name="AnnotateHotkeyBox"
+                                 GotKeyboardFocus="OnHotkeyGotKeyboardFocus"
+                                 LostKeyboardFocus="OnHotkeyLostKeyboardFocus"
+                                 PreviewKeyDown="OnHotkeyPreviewKeyDown" />
+                        <TextBlock Grid.Row="4" Grid.Column="2" x:Name="AnnotateHint"
+                                   Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    </Grid>
+
+                    <TextBlock Text="點擊欄位後直接按下組合鍵。至少需要一個修飾鍵，例如 Ctrl+Shift+X、Alt+F1。"
+                               Style="{StaticResource CaptionStyle}"
+                               Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="擷取" Style="{StaticResource SectionTitleStyle}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <TextBlock Text="延遲秒數" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="DelayCombo" Width="100" />
+                    </StackPanel>
+
+                    <CheckBox x:Name="AutoCopyCheck" Content="擷取後自動複製到剪貼簿" Margin="0,14,0,0" />
+                    <CheckBox x:Name="CaptureSoundCheck" Content="使用快捷鍵擷取完成時播放音效" Margin="0,10,0,0" />
+                    <CheckBox x:Name="MagnifierCheck" Content="選取時顯示放大鏡與顏色資訊" Margin="0,10,0,0" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="螢幕標註" Style="{StaticResource SectionTitleStyle}" />
+
+                    <TextBlock Text="開始標註時套用；結束標註時會記住當時的狀態。"
+                               Style="{StaticResource CaptionStyle}"
+                               Margin="0,10,0,0" />
+
+                    <CheckBox x:Name="AnnotateClickThroughCheck"
+                              Content="預設使用游標模式（點擊穿透到底下的應用程式）"
+                              Margin="0,12,0,0" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="背景" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="AnnotateBackdropCombo" Width="140" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="儲存" Style="{StaticResource SectionTitleStyle}" />
+
+                    <TextBlock Text="自動存檔資料夾" Margin="0,14,0,6" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="瀏覽"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Margin="8,0,0,0"
+                                Click="OnBrowseClick" />
+                        <TextBox x:Name="SaveDirBox" />
+                    </DockPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="預設格式" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="FormatCombo" Width="120" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="JPEG 品質" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <Slider x:Name="JpegQualitySlider"
+                                Width="180"
+                                Minimum="1"
+                                Maximum="100"
+                                TickFrequency="1"
+                                IsSnapToTickEnabled="True"
+                                ValueChanged="OnJpegQualityChanged" />
+                        <TextBlock x:Name="JpegQualityText"
+                                   Width="48"
+                                   Margin="10,0,0,0"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="僅套用於 JPEG"
+                                   Style="{StaticResource CaptionStyle}"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <CheckBox x:Name="SaveAutomaticallyCheck" Content="擷取後自動在資料夾留下一份圖檔" Margin="0,12,0,0" />
+
+                    <TextBlock Text="歷史庫位置" Style="{StaticResource CaptionStyle}" Margin="0,14,0,2" />
+                    <TextBlock x:Name="LibraryPathText" Style="{StaticResource CaptionStyle}" />
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="剪貼簿歷史" Style="{StaticResource SectionTitleStyle}" />
+
+                    <CheckBox x:Name="ClipboardHistoryCheck"
+                              Content="啟用剪貼簿歷史（監聽系統複製的圖片）"
+                              Margin="0,14,0,0" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="最多保留" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="MaxClipboardCombo" Width="110" />
+                        <TextBlock Text="筆（釘選項目不受限制）" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="歷史庫" Style="{StaticResource SectionTitleStyle}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <TextBlock Text="最多保留" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="MaxCaptureCombo" Width="110" />
+                        <TextBlock Text="張擷取" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="自動清除超過" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="RetentionCombo" Width="110" />
+                        <TextBlock Text="天的項目" VerticalAlignment="Center" Margin="10,0,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+                <StackPanel>
+                    <TextBlock Text="外觀" Style="{StaticResource SectionTitleStyle}" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <TextBlock Text="主題" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="ThemeCombo" Width="160" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+
+        <Border Grid.Row="1"
+                Background="{DynamicResource AppBackgroundBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,1,0,0"
+                Padding="0,12,0,4">
+            <StackPanel MaxWidth="780" HorizontalAlignment="Left" Orientation="Horizontal">
+                <Button x:Name="SaveButton"
+                        Content="儲存設定"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Click="OnSaveClick" />
+                <TextBlock x:Name="DirtyText"
+                           Text="尚未儲存"
+                           Foreground="{DynamicResource FavoriteBrush}"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           Visibility="Collapsed" />
+                <TextBlock x:Name="MessageText"
+                           Margin="12,0,0,0"
+                           VerticalAlignment="Center"
+                           FontSize="13"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

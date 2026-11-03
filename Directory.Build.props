@@ -1,0 +1,30 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <Platforms>x64;arm64</Platforms>
+    <Platform Condition="'$(Platform)' == ''">x64</Platform>
+    <PlatformTarget Condition="'$(PlatformTarget)' == ''">$(Platform)</PlatformTarget>
+    <Version>1.13.1</Version>
+    <AssemblyVersion>1.13.0.0</AssemblyVersion>
+    <FileVersion>1.13.1.0</FileVersion>
+    <Product>Clippings 剪貼簿</Product>
+    <Authors>Clippings</Authors>
+    <Company>Clippings</Company>
+    <Copyright>Copyright © 2026 Clippings</Copyright>
+    <NeutralLanguage>zh-Hant</NeutralLanguage>
+    <SatelliteResourceLanguages>zh-Hant;en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+</Project>
+
+
+
+
+
