@@ -73,7 +73,6 @@
                     <Button x:Name="PauseResumeButton"
                             Style="{StaticResource AnnotateIconButtonStyle}"
                             Click="OnPauseResumeClick"
-                            ToolTip="暫停錄影"
                             AutomationProperties.Name="暫停錄影">
                         <Viewbox Width="14" Height="14">
                             <Path x:Name="PauseResumeIcon"
@@ -86,7 +85,6 @@
                     <Button x:Name="StopButton"
                             Style="{StaticResource AnnotateIconButtonStyle}"
                             Click="OnStopClick"
-                            ToolTip="停止錄影"
                             AutomationProperties.Name="停止錄影">
                         <Viewbox Width="12" Height="12">
                             <Path Width="12"

@@ -533,7 +533,10 @@ public sealed class RecordingCoordinator
                 StopAsync);
         }
 
-        _notifications.Show(AppStrings.RecordingStarted, playSound: false);
+        if (target?.IsWindow == true)
+        {
+            _notifications.Show(AppStrings.RecordingStarted, playSound: false);
+        }
     }
 
     private async Task WaitBeforeRecordingAsync(

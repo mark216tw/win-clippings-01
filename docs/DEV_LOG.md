@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-11-04 - v1.22.0
+
+### 目標
+
+避免全螢幕錄影開頭錄到「已開始錄影」通知，並讓錄影控制列提供暫停／繼續與停止快捷鍵。
+
+### 變更
+
+- `RecordingCoordinator`：僅視窗錄影顯示「已開始錄影」通知；全螢幕錄影改由控制列提示。
+- `RecordingHotkeys`：新增 `Ctrl+Shift+P` 暫停／繼續、`Ctrl+Shift+S` 停止。
+- `RecordingOverlayWindow`：在控制列視窗註冊全域快捷鍵並處理 `WM_HOTKEY`，關閉時解除註冊；tooltip 與自動化名稱會標示快捷鍵（註冊失敗時省略）。
+- `RecordingOverlayWindow`：Tooltip 開啟時取得其 Popup HWND 並排除錄影擷取，避免 tooltip 被錄進影片。
+- `HotkeyGestureTests`：新增錄影快捷鍵測試。
+- 版本提升至 1.22.0，同步更新 README、USER_GUIDE、CHANGELOG、RELEASE_NOTES。
+
+### 問題與解法
+
+- 開始通知原本在擷取開始後顯示，全螢幕錄影會把它錄進影片；改為全螢幕不顯示通知。
+- 控制列是非啟動視窗，無法依靠鍵盤焦點；改在控制列 HWND 上註冊全域快捷鍵，生命週期與控制列一致。
+- WPF Tooltip 是獨立 Popup 視窗，原本只排除控制列主視窗，造成 tooltip 被錄下；改為 tooltip 開啟後取得 Popup HWND 並套用 `ExcludeFromCapture`。
+- x64 Debug 建置 0 警告、104 項測試與格式檢查通過。
+
+### 待辦
+
+- 尚未在實機錄影後檢視影片開頭、快捷鍵操作與 tooltip 排除結果。
+
+### 日期與版本
+
+2026-11-04，v1.22.0。
+
+---
+
 ## 2026-11-04 - v1.21.0
 
 ### 目標

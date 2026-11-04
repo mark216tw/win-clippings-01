@@ -36,4 +36,19 @@ public class HotkeyGestureTests
         Assert.True(HotkeyGesture.TryParse(gesture.DisplayName, out var parsed));
         Assert.Equal(gesture, parsed);
     }
+
+    [Fact]
+    public void RecordingHotkeys_UseExpectedGestures()
+    {
+        Assert.Equal("Ctrl+Shift+P", RecordingHotkeys.PauseResume.DisplayName);
+        Assert.Equal("Ctrl+Shift+S", RecordingHotkeys.Stop.DisplayName);
+        Assert.Equal((uint)'P', RecordingHotkeys.PauseResume.VirtualKey);
+        Assert.Equal((uint)'S', RecordingHotkeys.Stop.VirtualKey);
+        Assert.Equal(
+            HotkeyModifiers.Control | HotkeyModifiers.Shift,
+            RecordingHotkeys.PauseResume.Modifiers);
+        Assert.Equal(
+            HotkeyModifiers.Control | HotkeyModifiers.Shift,
+            RecordingHotkeys.Stop.Modifiers);
+    }
 }
