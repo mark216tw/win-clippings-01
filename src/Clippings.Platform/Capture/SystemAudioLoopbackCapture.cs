@@ -1,3 +1,4 @@
+using Clippings.Core.Helpers;
 using Clippings.Core.Models;
 using NAudio.Wave;
 
@@ -17,14 +18,16 @@ internal sealed class SystemAudioLoopbackCapture : IDisposable
     private readonly WasapiLoopbackCapture _capture;
     private readonly BufferedWaveProvider _buffer;
     private readonly MediaFoundationResampler _resampler;
+    private readonly double _gain;
     private Exception? _failure;
     private bool _started;
     private bool _stopping;
     private bool _disposed;
 
-    public SystemAudioLoopbackCapture(RecordingControl control)
+    public SystemAudioLoopbackCapture(RecordingControl control, double gain = 2.0)
     {
         _control = control;
+        _gain = double.IsFinite(gain) && gain > 0 ? gain : 1.0;
         try
         {
             _capture = new WasapiLoopbackCapture();
@@ -86,6 +89,7 @@ internal sealed class SystemAudioLoopbackCapture : IDisposable
                 Array.Clear(packet, bytesRead, packet.Length - bytesRead);
             }
 
+            AudioGain.ApplyToBuffer(packet, packet.Length, _gain);
             return packet;
         }
     }

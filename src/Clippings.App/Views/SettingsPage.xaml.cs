@@ -38,6 +38,14 @@ public partial class SettingsPage : UserControl
         new(20_000_000, "20 Mbps"),
     ];
 
+    private static readonly GainOption[] RecordingAudioGainOptions =
+    [
+        new(1.0, "100%"),
+        new(1.5, "150%"),
+        new(2.0, "200%（+6 dB）"),
+        new(3.0, "300%"),
+    ];
+
     private readonly AppState _state;
     private readonly IClippingsStore _store;
     private readonly GlobalHotkeyService _globalHotkeys;
@@ -66,6 +74,7 @@ public partial class SettingsPage : UserControl
         RecordingFrameRateCombo.ItemsSource = new[] { 30, 60 };
         RecordingDelayCombo.ItemsSource = new[] { 0, 5, 10, 20, 30 };
         RecordingBitrateCombo.ItemsSource = RecordingBitrateOptions;
+        RecordingSystemAudioGainCombo.ItemsSource = RecordingAudioGainOptions;
 
         LibraryPathText.Text = store.DataRoot;
 
@@ -109,6 +118,10 @@ public partial class SettingsPage : UserControl
                 : 8_000_000;
             RecordingCursorCheck.IsChecked = settings.Recording.IncludeCursor;
             RecordingSystemAudioCheck.IsChecked = settings.Recording.IncludeSystemAudio;
+            RecordingSystemAudioGainCombo.SelectedValue = settings.Recording.SystemAudioGain is 1.0 or 1.5 or 2.0 or 3.0
+                ? settings.Recording.SystemAudioGain
+                : 2.0;
+            RecordingSystemAudioGainCombo.IsEnabled = settings.Recording.IncludeSystemAudio;
             RecordingDelayCombo.SelectedItem = settings.Recording.DelaySeconds is 0 or 5 or 10 or 20 or 30
                 ? settings.Recording.DelaySeconds
                 : 0;
@@ -293,6 +306,9 @@ public partial class SettingsPage : UserControl
         }
     }
 
+    private void OnRecordingSystemAudioChanged(object sender, RoutedEventArgs e)
+        => RecordingSystemAudioGainCombo.IsEnabled = RecordingSystemAudioCheck.IsChecked == true;
+
     private void OnBrowseRecordingDirectoryClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog
@@ -457,6 +473,9 @@ public partial class SettingsPage : UserControl
         settings.Recording.Bitrate = RecordingBitrateCombo.SelectedValue is int bitrate ? bitrate : 8_000_000;
         settings.Recording.IncludeCursor = RecordingCursorCheck.IsChecked == true;
         settings.Recording.IncludeSystemAudio = RecordingSystemAudioCheck.IsChecked == true;
+        settings.Recording.SystemAudioGain = RecordingSystemAudioGainCombo.SelectedValue is double audioGain
+            ? audioGain
+            : 2.0;
         settings.Recording.DelaySeconds = RecordingDelayCombo.SelectedItem is int recordingDelay ? recordingDelay : 0;
 
         _isLoading = true;
@@ -536,6 +555,7 @@ public partial class SettingsPage : UserControl
         RecordingBitrateCombo.SelectedValue is int bitrate ? bitrate : 8_000_000,
         RecordingCursorCheck.IsChecked == true,
         RecordingSystemAudioCheck.IsChecked == true,
+        RecordingSystemAudioGainCombo.SelectedValue is double audioGain ? audioGain : 2.0,
         RecordingDelayCombo.SelectedItem is int recordingDelay ? recordingDelay : 0);
 
     private static string NormalizeHotkey(string text)
@@ -606,10 +626,13 @@ public partial class SettingsPage : UserControl
         int RecordingBitrate,
         bool RecordingIncludeCursor,
         bool RecordingIncludeSystemAudio,
+        double RecordingSystemAudioGain,
         int RecordingDelaySeconds);
 
     private sealed record ThemeOption(AppTheme Value, string DisplayName);
 
     private sealed record BitrateOption(int Value, string DisplayName);
+
+    private sealed record GainOption(double Value, string DisplayName);
 }
 

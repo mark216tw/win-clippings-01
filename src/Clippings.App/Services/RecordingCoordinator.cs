@@ -378,6 +378,9 @@ public sealed class RecordingCoordinator
             settings.DelaySeconds = settings.DelaySeconds is 0 or 5 or 10 or 20 or 30
                 ? settings.DelaySeconds
                 : 0;
+            settings.SystemAudioGain = settings.SystemAudioGain is 1.0 or 1.5 or 2.0 or 3.0
+                ? settings.SystemAudioGain
+                : 2.0;
             var outputDirectory = string.IsNullOrWhiteSpace(settings.OutputDirectory)
                 ? PathUtil.DefaultRecordingRoot
                 : Path.GetFullPath(settings.OutputDirectory);
@@ -444,7 +447,8 @@ public sealed class RecordingCoordinator
                 checked((uint)settings.FrameRate),
                 checked((uint)settings.Bitrate),
                 settings.IncludeCursor,
-                settings.IncludeSystemAudio);
+                settings.IncludeSystemAudio,
+                settings.SystemAudioGain);
             var wait = (CancellationToken cancellationToken) => WaitBeforeRecordingAsync(
                 target,
                 settings.DelaySeconds,
@@ -465,9 +469,10 @@ public sealed class RecordingCoordinator
                     wait,
                     MarkRecordingStarted).ConfigureAwait(false);
             _logger.LogInformation(
-                "螢幕錄影完成：{Path}，停止原因：{Reason}",
+                "螢幕錄影完成：{Path}，停止原因：{Reason}，時長：{Duration}",
                 result.OutputPath,
-                result.StopReason);
+                result.StopReason,
+                control.Elapsed);
             lock (_sync)
             {
                 _lastOutputPath = result.OutputPath;

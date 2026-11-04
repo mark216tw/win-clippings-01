@@ -87,6 +87,7 @@ public class AppSettingsTests
         clone.Recording.Bitrate = 20_000_000;
         clone.Recording.IncludeCursor = false;
         clone.Recording.IncludeSystemAudio = true;
+        clone.Recording.SystemAudioGain = 3.0;
         clone.Recording.DelaySeconds = 20;
 
         Assert.Equal(string.Empty, settings.Recording.OutputDirectory);
@@ -94,6 +95,7 @@ public class AppSettingsTests
         Assert.Equal(8_000_000, settings.Recording.Bitrate);
         Assert.True(settings.Recording.IncludeCursor);
         Assert.False(settings.Recording.IncludeSystemAudio);
+        Assert.Equal(2.0, settings.Recording.SystemAudioGain);
         Assert.Equal(0, settings.Recording.DelaySeconds);
     }
 
@@ -107,6 +109,7 @@ public class AppSettingsTests
         Assert.Equal(8_000_000, recording.Bitrate);
         Assert.True(recording.IncludeCursor);
         Assert.False(recording.IncludeSystemAudio);
+        Assert.Equal(2.0, recording.SystemAudioGain);
         Assert.Equal(0, recording.DelaySeconds);
     }
 

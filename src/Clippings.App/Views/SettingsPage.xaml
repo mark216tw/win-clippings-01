@@ -22,53 +22,12 @@
 
             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
                 <StackPanel>
-                    <TextBlock Text="螢幕錄影" Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="外觀" Style="{StaticResource SectionTitleStyle}" />
 
-                    <TextBlock Text="輸出資料夾（留白使用「影片\Clippings」）" Margin="0,14,0,6" />
-                    <DockPanel>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                            <Button Content="開啟"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Margin="8,0,0,0"
-                                    ToolTip="在檔案總管中開啟錄影資料夾"
-                                    Click="OnOpenRecordingFolderClick" />
-                            <Button Content="瀏覽"
-                                    Style="{StaticResource SecondaryButtonStyle}"
-                                    Margin="8,0,0,0"
-                                    Click="OnBrowseRecordingDirectoryClick" />
-                        </StackPanel>
-                        <TextBox x:Name="RecordingDirBox" />
-                    </DockPanel>
-
-                    <WrapPanel Margin="0,12,0,0">
-                        <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
-                            <TextBlock Text="幀率" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <ComboBox x:Name="RecordingFrameRateCombo" Width="100" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="視訊位元率" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <ComboBox x:Name="RecordingBitrateCombo"
-                                      Width="130"
-                                      DisplayMemberPath="DisplayName"
-                                      SelectedValuePath="Value" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Margin="24,0,0,0">
-                            <TextBlock Text="開始延遲" VerticalAlignment="Center" Margin="0,0,10,0" />
-                            <ComboBox x:Name="RecordingDelayCombo" Width="100" />
-                            <TextBlock Text="秒" VerticalAlignment="Center" Margin="8,0,0,0" />
-                        </StackPanel>
-                    </WrapPanel>
-
-                    <CheckBox x:Name="RecordingCursorCheck"
-                              Content="錄製滑鼠游標（Windows 10 2004 以上）"
-                              Margin="0,12,0,0" />
-                    <CheckBox x:Name="RecordingSystemAudioCheck"
-                              Content="錄製電腦播放的聲音（不包含麥克風）"
-                              Margin="0,8,0,0" />
-                    <TextBlock Text="目前以開始錄影時的視窗原始尺寸輸出；視窗改變尺寸時會自動停止並完成 MP4。"
-                               Style="{StaticResource CaptionStyle}"
-                               Margin="0,10,0,0"
-                               TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
+                        <TextBlock Text="主題" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="ThemeCombo" Width="160" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
@@ -269,12 +228,62 @@
 
             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
                 <StackPanel>
-                    <TextBlock Text="外觀" Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="螢幕錄影" Style="{StaticResource SectionTitleStyle}" />
 
-                    <StackPanel Orientation="Horizontal" Margin="0,14,0,0">
-                        <TextBlock Text="主題" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        <ComboBox x:Name="ThemeCombo" Width="160" />
+                    <TextBlock Text="輸出資料夾（留白使用「影片\Clippings」）" Margin="0,14,0,6" />
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="開啟"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    ToolTip="在檔案總管中開啟錄影資料夾"
+                                    Click="OnOpenRecordingFolderClick" />
+                            <Button Content="瀏覽"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    Click="OnBrowseRecordingDirectoryClick" />
+                        </StackPanel>
+                        <TextBox x:Name="RecordingDirBox" />
+                    </DockPanel>
+
+                    <WrapPanel Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                            <TextBlock Text="幀率" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ComboBox x:Name="RecordingFrameRateCombo" Width="100" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="視訊位元率" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ComboBox x:Name="RecordingBitrateCombo"
+                                      Width="130"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectedValuePath="Value" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="24,0,0,0">
+                            <TextBlock Text="開始延遲" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ComboBox x:Name="RecordingDelayCombo" Width="100" />
+                            <TextBlock Text="秒" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <CheckBox x:Name="RecordingCursorCheck"
+                              Content="錄製滑鼠游標（Windows 10 2004 以上）"
+                              Margin="0,12,0,0" />
+                    <CheckBox x:Name="RecordingSystemAudioCheck"
+                              Content="錄製電腦播放的聲音（不包含麥克風）"
+                              Margin="0,8,0,0"
+                              Checked="OnRecordingSystemAudioChanged"
+                              Unchecked="OnRecordingSystemAudioChanged" />
+                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                        <TextBlock Text="系統音訊音量" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="RecordingSystemAudioGainCombo"
+                                  Width="120"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectedValuePath="Value" />
                     </StackPanel>
+                    <TextBlock Text="視窗錄影開始後若調整所選視窗大小或將視窗最小化，錄影會自動停止。&#x0A;全螢幕錄影無此限制。"
+                               Style="{StaticResource CaptionStyle}"
+                               Margin="0,10,0,0"
+                               TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
 

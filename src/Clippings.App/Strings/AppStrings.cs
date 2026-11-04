@@ -91,7 +91,7 @@ public static class AppStrings
     public const string RecordingUnsupported = "此 Windows 版本或顯示環境不支援螢幕錄影。";
     public const string RecordingTargetUnavailable = "所選視窗已無法錄製，請重新選擇。";
     public const string RecordingMonitorUnavailable = "找不到可錄製的螢幕。";
-    public const string RecordingResizeWarning = "錄影開始後若調整所選視窗的大小，錄影會自動停止。";
+    public const string RecordingResizeWarning = "錄影開始後若調整所選視窗大小或將視窗最小化，錄影會自動停止。";
     public const string RecordingTrayToolTip = "Clippings 剪貼簿（正在錄影）";
     public const string RecordingTrayToolTipPaused = "Clippings 剪貼簿（錄影已暫停）";
     public const string CommandLineUsage = """
@@ -134,6 +134,7 @@ public static class AppStrings
         {
             RecordingStopReason.TargetClosed => "目標視窗已關閉，錄影已自動停止。",
             RecordingStopReason.TargetResized => "目標視窗尺寸已改變，錄影已自動停止。",
+            RecordingStopReason.TargetMinimized => "目標視窗已最小化，錄影已自動停止。",
             _ => "錄影已儲存。",
         };
         return $"{detail}{Environment.NewLine}{path}";

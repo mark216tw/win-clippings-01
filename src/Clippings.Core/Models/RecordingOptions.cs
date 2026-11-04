@@ -5,7 +5,8 @@ public sealed record RecordingOptions(
     uint FrameRate = 30,
     uint Bitrate = 8_000_000,
     bool IncludeCursor = true,
-    bool IncludeSystemAudio = false);
+    bool IncludeSystemAudio = false,
+    double SystemAudioGain = 2.0);
 
 public sealed class RecordingSettings
 {
@@ -18,6 +19,8 @@ public sealed class RecordingSettings
     public bool IncludeCursor { get; set; } = true;
 
     public bool IncludeSystemAudio { get; set; }
+
+    public double SystemAudioGain { get; set; } = 2.0;
 
     public int DelaySeconds { get; set; }
 
@@ -39,6 +42,7 @@ public enum RecordingStopReason
     UserRequested = 0,
     TargetClosed = 1,
     TargetResized = 2,
+    TargetMinimized = 3,
 }
 
 public sealed record RecordingResult(string OutputPath, RecordingStopReason StopReason);

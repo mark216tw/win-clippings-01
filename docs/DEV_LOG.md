@@ -4,6 +4,119 @@
 
 ---
 
+## 2026-11-04 - v1.20.6
+
+### 目標
+
+調整設定頁區塊順序，讓常用外觀設定更靠前，螢幕錄影設定集中於頁面最下方。
+
+### 變更
+
+- `SettingsPage.xaml`：外觀卡片移至開機自動啟動後方，成為第二個區塊；螢幕錄影卡片移至所有設定區塊最後。
+- `Directory.Build.props`、發行文件：版本提升至 1.20.6。
+
+### 問題與解法
+
+- 僅移動完整 XAML 卡片，不更動控制項名稱、事件或資料載入與儲存邏輯。
+- x64 與 ARM64 Debug 建置 0 警告、101 項測試與格式檢查通過。
+- x64 與 ARM64 framework-dependent Release 發佈及 ZIP 打包成功，ZIP 均排除 PDB；x64 發佈版啟動 smoke test 通過。
+
+### 待辦
+
+- ARM64 發佈版已完成建置與封裝，尚未在 ARM64 實機執行。
+
+### 日期與版本
+
+2026-11-04，v1.20.6。
+
+---
+
+## 2026-11-04 - v1.20.5
+
+### 目標
+
+讓設定頁的螢幕錄影說明清楚區分視窗錄影與全螢幕錄影的限制。
+
+### 變更
+
+- `SettingsPage.xaml`：說明文字開頭加入「視窗」，並新增第二行「全螢幕錄影無此限制。」。
+- `Directory.Build.props`、發行文件：版本提升至 1.20.5。
+
+### 問題與解法
+
+- 原說明未明確指出限制只適用於視窗錄影；改成兩行文字，直接標示全螢幕錄影不受此限制。
+- x64 與 ARM64 Debug 建置 0 警告、101 項測試與格式檢查通過。
+
+### 待辦
+
+- 無。
+
+### 日期與版本
+
+2026-11-04，v1.20.5。
+
+---
+
+## 2026-11-04 - v1.20.4
+
+### 目標
+
+修正 v1.20.3 將 WGC frame 複製至 CPU buffer 後，錄影畫面上下顛倒的問題。
+
+### 變更
+
+- `WindowsGraphicsRecordingService.cs`：在 BGRA `VideoEncodingProperties` 設定 `MF_MT_DEFAULT_STRIDE`，以正 stride 明確標示 frame buffer 為 top-down 排列。
+- `Directory.Build.props`、發行文件：版本提升至 1.20.4。
+
+### 問題與解法
+
+- Direct3D／`SoftwareBitmap` frame 在記憶體中為 top-down；未提供 stride 時，Media Foundation 以 system-memory RGB 的預設方向解讀，造成輸出上下顛倒。設定每列 `width * 4` bytes 的正 stride，避免逐幀翻轉與額外 CPU 複製。
+- x64 與 ARM64 Debug 建置 0 警告、101 項測試與格式檢查通過；另以「上紅、下藍」測試視窗實際錄製 MP4，播放畫面取樣確認方向正確。
+
+### 待辦
+
+- 無。
+
+### 日期與版本
+
+2026-11-04，v1.20.4。
+
+---
+
+## 2026-11-04 - v1.20.3
+
+### 目標
+
+修正錄影畫面永久凍結、停止前後影音不順、系統音訊偏小，以及最小化被誤判為尺寸變更的問題。
+
+### 變更
+
+- `WindowsGraphicsRecordingService.cs`：不再保留多格 WGC frame 給 encoder；每個 output sample 先將最新 frame 複製到 CPU `SoftwareBitmap`／`IBuffer`，再立即釋放 WGC frame，移除 frame reference 計數與 4 格上限。
+- `WindowsGraphicsRecordingService.cs`：新增停止 drain；停止後 video/audio 繼續產生到停止時間點，最後一個 sample 的 duration 截齊，最多等待 2 秒後強制結束。
+- `WindowsGraphicsRecordingService.cs`：新增最小化輪詢與 `TargetMinimized` 停止原因；0×0 frame 不再被當成尺寸變更。
+- `SystemAudioLoopbackCapture.cs`、`AudioGain.cs`：系統音訊加入可調增益與防溢位截斷，預設 200%（+6 dB）。
+- `RecordingSettings`、`RecordingOptions`、`SettingsPage`：新增「系統音訊音量」選項（100／150／200／300%）。
+- `AppStrings.cs`、`SettingsPage.xaml`、`RecordingTargetDialog.xaml`：更新錄影停止提示文字為「錄影開始後若調整所選視窗大小或將視窗最小化，錄影會自動停止。」。
+- 測試與版本：新增 `AudioGainTests`，更新錄影設定預設值測試；版本提升至 1.20.3。
+
+### 問題與解法
+
+- 原 pipeline 把 WGC frame 保留到 encoder 的 `Processed` callback；encoder 延遲時 frame pool 被占滿，之後只能重複舊 frame，造成畫面永久停住但聲音繼續。改為 frame 複製後立即釋放，讓 frame pool 永遠可接收新畫面。
+- 停止時原本立即中斷 media source，最後約 1 秒的影音可能被截掉；改為 drain 到停止時間點，並讓 video/audio 使用同一個停止時間。
+- 最小化時 WGC 會送出 0×0 frame，舊程式誤判為 `TargetResized`；改為以 `IsIconic` 判斷並使用新的停止原因。
+- x64 與 ARM64 Debug 建置 0 警告、101 項測試與格式檢查通過。
+
+### 待辦
+
+- 需以 5–10 分鐘、含系統音訊的錄影實測凍結與結尾同步；若 WGC 本身停止供格，仍需追加 frame pool/session 重建的復原機制。
+- CPU frame 複製在 4K/60 的效能尚未實測；必要時改為 GPU texture copy 或限制錄影解析度。
+
+### 日期與版本
+
+2026-11-04，v1.20.3。
+
+---
+
 ## 2026-11-04 - v1.20.2
 
 ### 目標
