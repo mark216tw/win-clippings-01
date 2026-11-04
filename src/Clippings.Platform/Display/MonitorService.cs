@@ -47,6 +47,7 @@ public sealed class MonitorService
 
             monitors.Add(new MonitorInfo(
                 index++,
+                hMonitor,
                 info.DeviceName,
                 bounds,
                 work,
@@ -86,4 +87,10 @@ public sealed class MonitorService
             x >= monitor.Bounds.X && x < monitor.Bounds.Right &&
             y >= monitor.Bounds.Y && y < monitor.Bounds.Bottom);
     }
+
+    public MonitorInfo? GetMonitorForRect(PixelRect rect)
+        => GetMonitorAt(rect.X + (rect.Width / 2), rect.Y + (rect.Height / 2));
+
+    public MonitorInfo? GetPrimaryMonitor()
+        => GetMonitors().FirstOrDefault(monitor => monitor.IsPrimary);
 }

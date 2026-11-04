@@ -14,6 +14,11 @@ public static class PathUtil
             Environment.GetFolderPath(Environment.SpecialFolder.MyPictures),
             AppFolderName);
 
+    public static string DefaultRecordingRoot
+        => Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.MyVideos),
+            AppFolderName);
+
     public static string ImagesDirectory(string dataRoot) => Path.Combine(dataRoot, "images");
 
     public static string ThumbnailsDirectory(string dataRoot) => Path.Combine(dataRoot, "thumbs");
@@ -35,4 +40,7 @@ public static class PathUtil
 
     public static string BuildImageFileName(DateTimeOffset createdAt, string hash, string extension)
         => $"Clippings_{createdAt:yyyyMMdd_HHmmss}_{hash[..8]}.{extension}";
+
+    public static string BuildRecordingFileName(DateTimeOffset createdAt)
+        => $"Clippings_{createdAt:yyyyMMdd_HHmmss}.mp4";
 }

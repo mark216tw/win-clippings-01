@@ -10,7 +10,7 @@ Clippings 是離線的 Windows 桌面應用程式。本文件說明程式會處�
 
 - **不連線**：程式沒有網路功能，不會上傳截圖、剪貼簿內容、設定或日誌。
 - **不收集遙測**：沒有帳號、沒有使用統計、沒有崩潰回報服務。
-- **本機儲存**：所有資料位於目前使用者的 `%LOCALAPPDATA%\Clippings`。
+- **本機儲存**：應用程式資料位於 `%LOCALAPPDATA%\Clippings`；匯出的錄影預設位於使用者的 `影片\Clippings`（可自訂），不會上傳。
 - **可完全關閉監聽**：剪貼簿歷史可在設定頁停用。
 - **可完全刪除**：刪除資料夾與相關登錄值即可清除。
 
@@ -21,6 +21,7 @@ Clippings 是離線的 Windows 桌面應用程式。本文件說明程式會處�
 | 資料 | 來源 | 用途 | 位置 |
 | --- | --- | --- | --- |
 | 螢幕擷取影像 | 使用者主動擷取 | 複製、編輯、存檔、歷史庫 | `images\`、`clipboard\` |
+| 螢幕錄影與可選的系統音訊 | 使用者從主視窗或系統匣主動開始 | 本機 MP4 錄影 | `%USERPROFILE%\Videos\Clippings` 或使用者指定資料夾 |
 | 縮圖 | 由擷取影像產生 | 歷史列表預覽 | `thumbs\` |
 | 擷取中繼資料 | 擷取流程 | 歷史查詢、收藏、保留策略 | `clippings.db` |
 | 剪貼簿內容 | 系統剪貼簿（可關閉） | 剪貼簿歷史 | `clippings.db`、`clipboard\` |
@@ -29,6 +30,8 @@ Clippings 是離線的 Windows 桌面應用程式。本文件說明程式會處�
 | 開機啟動設定 | 使用者勾選 | 登入時啟動 | `HKCU\...\Run` |
 
 程式**不會**讀取瀏覽器密碼、檔案內容或網路流量。
+
+錄製電腦聲音預設關閉。啟用後會擷取預設播放裝置的混音，可能包含媒體、通知與通訊聲音，但不會擷取麥克風；DRM 或獨占模式音訊可能無法錄製。
 
 ---
 
@@ -57,7 +60,7 @@ Clippings 是離線的 Windows 桌面應用程式。本文件說明程式會處�
 
 - 程式本體沒有網路呼叫。
 - 安裝與更新由使用者手動下載，不包含自動更新器。
-- 第三方套件（SkiaSharp、EF Core、CommunityToolkit.Mvvm、H.NotifyIcon 等）在本機執行，不會主動傳送資料。
+- 第三方套件（SkiaSharp、EF Core、CommunityToolkit.Mvvm、H.NotifyIcon、NAudio 等）在本機執行，不會主動傳送資料。
 - GitHub 網站與 Release 下載受 GitHub 自身的隱私政策規範。
 
 ---
@@ -78,6 +81,9 @@ Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" 
 
 # 若曾自動存檔，另外檢查
 # %USERPROFILE%\Pictures\Clippings
+
+# 若曾錄影，另外檢查
+# %USERPROFILE%\Videos\Clippings
 ```
 
 ---

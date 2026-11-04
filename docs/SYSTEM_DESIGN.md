@@ -35,7 +35,7 @@ Clippings 是一個 Windows 單機桌面應用程式，提供：
 - 提供雲端備份或跨裝置同步。
 - 支援 Windows 10 1809 以前的版本。
 - 支援 ARM64 或 32 位元 Windows。
-- 螢幕錄影、滾動長截圖、OCR。
+- 完整錄影功能（螢幕／區域、音訊、暫停、影片編輯）、滾動長截圖、OCR。
 
 ---
 
@@ -52,6 +52,7 @@ Clippings 是一個 Windows 單機桌面應用程式，提供：
 | UC-07 | 找回稍早複製的圖片 | 主視窗 → 剪貼簿歷史 → 釘選／複製／加入擷取 |
 | UC-08 | 由腳本觸發擷取 | 命令列參數 → 轉送既有實例 → 擷取 |
 | UC-09 | 開機後自動常駐 | `--autostart` → 隱藏主視窗 → 註冊快捷鍵 |
+| UC-10 | 錄製目前視窗 | 系統匣開始 → WGC 擷取 → 系統匣停止／目標改變 → 無聲 MP4 |
 
 ---
 
@@ -79,6 +80,7 @@ Clippings 是一個 Windows 單機桌面應用程式，提供：
 | FR-16 | 支援最小命令列參數與退出碼 | `CommandLineOptions`、`App` |
 | FR-17 | 提供九種介面主題 | `ThemeService`、`Styles/*.xaml` |
 | FR-18 | 編輯器按「儲存」時把變更覆蓋存回原本的擷取項目 | `EditorWindow`、`UpdateCaptureImageAsync` |
+| FR-19 | 從主視窗或系統匣選擇視窗或目前螢幕錄影，設定 FPS／位元率／游標／延遲／資料夾並輸出無聲 H.264 MP4；錄影中可暫停、繼續、停止 | `RecordingCoordinator`、`RecordingOverlayService`、`WindowsGraphicsRecordingService`、`SettingsPage` |
 
 ### 4.2 非功能需求
 
@@ -137,11 +139,11 @@ flowchart LR
 - 缺點：Fluent 視覺需自行以樣式模擬，沒有 WinUI 的原生 NavigationView。
 - 決策記錄於 `docs/DEV_LOG.md`。
 
-### 7.2 GDI `BitBlt` 而非 Windows.Graphics.Capture
+### 7.2 GDI `BitBlt` 搭配 Windows.Graphics.Capture
 
-- 優點：相容性高、可直接取得整個虛擬桌面、實作簡單。
-- 缺點：只能取得桌面可見畫面；無法擷取被遮擋或最小化的視窗。
-- 未來可新增 Windows.Graphics.Capture 作為替代來源。
+- 區域、全螢幕與螢幕擷取維持 GDI，保留高相容性與直接取得虛擬桌面的能力。
+- 目前視窗在 Windows 10 1903 以上優先使用 Windows.Graphics.Capture，補強被其他視窗遮擋的情境。
+- Windows.Graphics.Capture 不支援或失敗時自動退回 GDI，不提高應用程式的最低 Windows 版本。
 
 ### 7.3 SQLite 中繼資料 + 外部圖檔
 
@@ -263,11 +265,11 @@ stateDiagram-v2
 | 層級 | 方式 |
 | --- | --- |
 | Core | xUnit 單元測試：快捷鍵、幾何、復原堆疊、設定、雜湊、命令列 |
-| Platform | 以手動或整合測試驗證 GDI、SQLite、管線 |
+| Platform | 以手動或整合測試驗證 Windows.Graphics.Capture、GDI、SQLite、管線 |
 | UI | 手動操作驗證框選、編輯器、設定、系統匣 |
 | 建置 | `dotnet build`、`dotnet test`、`dotnet format --verify-no-changes` |
 
-目前沒有自動化 UI 測試與 GDI 擷取測試，這是後續可改善之處。
+目前沒有自動化 UI 測試與實際螢幕擷取測試，這是後續可改善之處。
 
 ---
 
@@ -275,7 +277,7 @@ stateDiagram-v2
 
 | 風險 | 影響 | 緩解 |
 | --- | --- | --- |
-| GDI 擷取受 DRM／獨佔全螢幕影響 | 黑畫面或空白 | 文件說明限制；未來考慮 Windows.Graphics.Capture |
+| WGC／GDI 擷取受 DRM、獨佔全螢幕或 GPU 環境影響 | 黑畫面、空白或失敗 | WGC 失敗自動退回 GDI；文件說明仍無法擷取的限制 |
 | 混合 DPI 多螢幕 | 框選位置誤差 | 目前僅以 100% 實測；需補齊驗證 |
 | 全螢幕擷取記憶體用量 | 多 4K 螢幕可能佔用大量記憶體 | 完成後立即釋放；縮圖降低長期成本 |
 | 剪貼簿含敏感資料 | 隱私風險 | 可關閉監聽、可清除、資料只存本機 |
@@ -286,9 +288,9 @@ stateDiagram-v2
 
 ## 14. 後續規劃
 
-- 以 Windows.Graphics.Capture 補強視窗與離屏擷取。
+- 擴充錄影至整個螢幕／區域、音訊、暫停與 GPU 固定畫布縮放。
 - 跨螢幕框選。
-- 滾動長截圖與螢幕錄影。
+- 滾動長截圖。
 - 多語系資源檔（`.resx`）。
 - 自動化 UI 測試與擷取整合測試。
 - 命令列 `--wait` 或輸出路徑，讓腳本能取得完成結果。

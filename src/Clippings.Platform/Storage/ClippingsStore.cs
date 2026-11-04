@@ -19,7 +19,8 @@ public sealed class ClippingsStore : IClippingsStore
     {
         _dataRoot = dataRoot;
         _options = new DbContextOptionsBuilder<ClippingsDbContext>()
-            .UseSqlite($"Data Source={PathUtil.DatabasePath(_dataRoot)};Default Timeout=5")
+            .UseSqlite($"Data Source={PathUtil.DatabasePath(_dataRoot)};Default Timeout=5;Pooling=True")
+            .AddInterceptors(new SqlitePragmaInterceptor())
             .Options;
     }
 

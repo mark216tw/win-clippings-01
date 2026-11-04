@@ -1,6 +1,7 @@
 <UserControl x:Class="Clippings.App.Views.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             PreviewKeyDown="OnPagePreviewKeyDown">
 
     <Grid>
         <Grid.RowDefinitions>
@@ -17,6 +18,58 @@
 
             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
                 <CheckBox x:Name="StartupCheck" Content="開機時自動啟動（最小化到系統匣）" />
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="螢幕錄影" Style="{StaticResource SectionTitleStyle}" />
+
+                    <TextBlock Text="輸出資料夾（留白使用「影片\Clippings」）" Margin="0,14,0,6" />
+                    <DockPanel>
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="開啟"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    ToolTip="在檔案總管中開啟錄影資料夾"
+                                    Click="OnOpenRecordingFolderClick" />
+                            <Button Content="瀏覽"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    Click="OnBrowseRecordingDirectoryClick" />
+                        </StackPanel>
+                        <TextBox x:Name="RecordingDirBox" />
+                    </DockPanel>
+
+                    <WrapPanel Margin="0,12,0,0">
+                        <StackPanel Orientation="Horizontal" Margin="0,0,24,0">
+                            <TextBlock Text="幀率" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ComboBox x:Name="RecordingFrameRateCombo" Width="100" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="視訊位元率" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ComboBox x:Name="RecordingBitrateCombo"
+                                      Width="130"
+                                      DisplayMemberPath="DisplayName"
+                                      SelectedValuePath="Value" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="24,0,0,0">
+                            <TextBlock Text="開始延遲" VerticalAlignment="Center" Margin="0,0,10,0" />
+                            <ComboBox x:Name="RecordingDelayCombo" Width="100" />
+                            <TextBlock Text="秒" VerticalAlignment="Center" Margin="8,0,0,0" />
+                        </StackPanel>
+                    </WrapPanel>
+
+                    <CheckBox x:Name="RecordingCursorCheck"
+                              Content="錄製滑鼠游標（Windows 10 2004 以上）"
+                              Margin="0,12,0,0" />
+                    <CheckBox x:Name="RecordingSystemAudioCheck"
+                              Content="錄製電腦播放的聲音（不包含麥克風）"
+                              Margin="0,8,0,0" />
+                    <TextBlock Text="目前以開始錄影時的視窗原始尺寸輸出；視窗改變尺寸時會自動停止並完成 MP4。"
+                               Style="{StaticResource CaptionStyle}"
+                               Margin="0,10,0,0"
+                               TextWrapping="Wrap" />
+                </StackPanel>
             </Border>
 
             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
@@ -124,11 +177,17 @@
 
                     <TextBlock Text="自動存檔資料夾" Margin="0,14,0,6" />
                     <DockPanel>
-                        <Button DockPanel.Dock="Right"
-                                Content="瀏覽"
-                                Style="{StaticResource SecondaryButtonStyle}"
-                                Margin="8,0,0,0"
-                                Click="OnBrowseClick" />
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button Content="開啟"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    ToolTip="在檔案總管中開啟自動存檔資料夾"
+                                    Click="OnOpenSaveFolderClick" />
+                            <Button Content="瀏覽"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="8,0,0,0"
+                                    Click="OnBrowseClick" />
+                        </StackPanel>
                         <TextBox x:Name="SaveDirBox" />
                     </DockPanel>
 
@@ -159,7 +218,18 @@
                     <CheckBox x:Name="SaveAutomaticallyCheck" Content="擷取後自動在資料夾留下一份圖檔" Margin="0,12,0,0" />
 
                     <TextBlock Text="歷史庫位置" Style="{StaticResource CaptionStyle}" Margin="0,14,0,2" />
-                    <TextBlock x:Name="LibraryPathText" Style="{StaticResource CaptionStyle}" />
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                Content="開啟"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Margin="8,0,0,0"
+                                ToolTip="在檔案總管中開啟歷史庫資料夾"
+                                Click="OnOpenDataFolderClick" />
+                        <TextBlock x:Name="LibraryPathText"
+                                   Style="{StaticResource CaptionStyle}"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                    </DockPanel>
                 </StackPanel>
             </Border>
 

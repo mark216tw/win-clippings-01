@@ -383,6 +383,29 @@ public partial class CaptureOverlayWindow : Window
             return;
         }
 
+        var step = Keyboard.Modifiers.HasFlag(ModifierKeys.Shift) ? 10 : 1;
+        var moveX = e.Key switch
+        {
+            Key.Left => -step,
+            Key.Right => step,
+            _ => 0,
+        };
+        var moveY = e.Key switch
+        {
+            Key.Up => -step,
+            Key.Down => step,
+            _ => 0,
+        };
+
+        if (moveX != 0 || moveY != 0)
+        {
+            _selection = _selection.MoveWithin(moveX, moveY, _bitmap.Width, _bitmap.Height);
+            RenderSelection();
+            ShowActionBar();
+            e.Handled = true;
+            return;
+        }
+
         if (e.Key == Key.Enter)
         {
             Complete(OverlayAction.Copy);
@@ -436,8 +459,22 @@ public partial class CaptureOverlayWindow : Window
     {
         var scaleX = ScaleX;
         var scaleY = ScaleY;
-        var start = new System.Numerics.Vector2((float)(_dragStart.X * scaleX), (float)(_dragStart.Y * scaleY));
-        var end = new System.Numerics.Vector2((float)(_dragCurrent.X * scaleX), (float)(_dragCurrent.Y * scaleY));
+        var startX = (float)(_dragStart.X * scaleX);
+        var startY = (float)(_dragStart.Y * scaleY);
+        var endX = (float)(_dragCurrent.X * scaleX);
+        var endY = (float)(_dragCurrent.Y * scaleY);
+
+        if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+        {
+            var dx = endX - startX;
+            var dy = endY - startY;
+            var size = Math.Max(Math.Abs(dx), Math.Abs(dy));
+            endX = startX + (dx < 0 ? -size : size);
+            endY = startY + (dy < 0 ? -size : size);
+        }
+
+        var start = new System.Numerics.Vector2(startX, startY);
+        var end = new System.Numerics.Vector2(endX, endY);
         return PixelRect.FromPoints(start, end).ClampTo(_bitmap.Width, _bitmap.Height);
     }
 

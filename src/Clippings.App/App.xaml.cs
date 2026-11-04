@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -7,6 +8,7 @@ using Clippings.App.Logging;
 using Clippings.App.Services;
 using Clippings.App.Strings;
 using Clippings.App.Views;
+using Clippings.Core.Helpers;
 using Clippings.Core.Input;
 using Clippings.Core.Models;
 using Clippings.Core.Services;
@@ -37,6 +39,12 @@ public partial class App : Application
     private MainWindow? _mainWindow;
     private TrayNotificationService? _notifications;
     private ScreenAnnotationService? _annotations;
+    private RecordingCoordinator? _recording;
+    private MenuItem? _startRecordingMenuItem;
+    private MenuItem? _startFullScreenRecordingMenuItem;
+    private MenuItem? _stopRecordingMenuItem;
+    private MenuItem? _openRecordingMenuItem;
+    private MenuItem? _clipboardHistoryMenuItem;
     private ILogger<App>? _logger;
 
     public static bool IsDarkTheme { get; private set; }
@@ -104,6 +112,8 @@ public partial class App : Application
         ThemeManager = _services.GetRequiredService<ThemeService>();
         ClippingsStore = _services.GetRequiredService<IClippingsStore>();
         Coordinator = _services.GetRequiredService<CaptureCoordinator>();
+        _recording = _services.GetRequiredService<RecordingCoordinator>();
+        _recording.StateChanged += OnRecordingStateChanged;
         _annotations = _services.GetRequiredService<ScreenAnnotationService>();
         _annotations.CaptureCoordinator = Coordinator;
         Coordinator.AnnotationService = _annotations;
@@ -117,6 +127,7 @@ public partial class App : Application
         _mainWindow = _services.GetRequiredService<MainWindow>();
         MainWindow = _mainWindow;
         Coordinator.MainWindow = _mainWindow;
+        _recording.MainWindow = _mainWindow;
         Coordinator.CaptureStored += (_, _) => _mainWindow.NotifyCaptureStored();
         State.SettingsChanged += OnSettingsChanged;
 
@@ -233,6 +244,7 @@ public partial class App : Application
                 logging.ClearProviders();
                 logging.AddDebug();
                 logging.AddProvider(new FileLoggerProvider(FileLoggerProvider.DefaultDirectory));
+                logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
                 logging.SetMinimumLevel(LogLevel.Information);
             })
             .ConfigureServices(services =>
@@ -245,7 +257,13 @@ public partial class App : Application
                 services.AddSingleton<ThemeService>();
                 services.AddSingleton<MonitorService>();
                 services.AddSingleton<ScreenCaptureService>();
+                services.AddSingleton<WindowsGraphicsCaptureService>();
+                services.AddSingleton<WindowsGraphicsRecordingService>();
                 services.AddSingleton<ForegroundWindowTracker>();
+                services.AddSingleton<WindowEnumerationService>();
+                services.AddSingleton<RecordingTargetPicker>();
+                services.AddSingleton<RecordingCountdownService>();
+                services.AddSingleton<RecordingOverlayService>();
                 services.AddSingleton<IClippingsStore>(_ =>
                 {
                     var store = new ClippingsStore();
@@ -253,6 +271,7 @@ public partial class App : Application
                     return store;
                 });
                 services.AddSingleton<CaptureCoordinator>();
+                services.AddSingleton<RecordingCoordinator>();
                 services.AddSingleton<ScreenAnnotationService>();
                 services.AddSingleton<GlobalHotkeyService>();
                 services.AddSingleton<ClipboardWatcher>();
@@ -279,7 +298,12 @@ public partial class App : Application
         var menu = new ContextMenu();
         ApplyWindowsThemeToTrayMenu(menu);
         ApplyStyle(menu, "AppContextMenuStyle");
-        menu.Opened += (_, _) => ApplyWindowsThemeToTrayMenu(menu);
+        menu.Opened += (_, _) =>
+        {
+            ApplyWindowsThemeToTrayMenu(menu);
+            UpdateRecordingMenuItems();
+            UpdateClipboardHistoryMenuItem();
+        };
 
         menu.Items.Add(CreateMenuItem("開啟 Clippings", ShowMainWindow));
         menu.Items.Add(CreateSeparator());
@@ -289,13 +313,102 @@ public partial class App : Application
         menu.Items.Add(CreateMenuItem("目前視窗擷取", () => _ = Coordinator!.CaptureWindowAsync()));
         menu.Items.Add(CreateMenuItem("延遲擷取", () => _ = Coordinator!.CaptureDelayedAsync()));
         menu.Items.Add(CreateSeparator());
+        _startRecordingMenuItem = CreateMenuItem(AppStrings.StartWindowRecording, () => _ = _recording!.StartWithSelectionAsync());
+        _startFullScreenRecordingMenuItem = CreateMenuItem(AppStrings.StartFullScreenRecording, () => _ = _recording!.StartFullScreenAsync());
+        _stopRecordingMenuItem = CreateMenuItem(AppStrings.StopRecording, () => _ = _recording!.StopAsync());
+        _openRecordingMenuItem = CreateMenuItem(AppStrings.OpenLastRecording, () => _ = _recording!.OpenLastRecording());
+        menu.Items.Add(_startFullScreenRecordingMenuItem);
+        menu.Items.Add(_startRecordingMenuItem);
+        menu.Items.Add(_stopRecordingMenuItem);
+        menu.Items.Add(_openRecordingMenuItem);
+        menu.Items.Add(CreateMenuItem(AppStrings.OpenRecordingFolder, () => _ = _recording!.OpenRecordingFolder()));
+        UpdateRecordingMenuItems();
+        menu.Items.Add(CreateSeparator());
         menu.Items.Add(CreateMenuItem("螢幕標註", () => _annotations?.Toggle()));
         menu.Items.Add(CreateMenuItem("剪貼簿歷史", () => ShowMainWindow(1)));
+        _clipboardHistoryMenuItem = CreateMenuItem("啟用剪貼簿歷史", ToggleClipboardHistory);
+        UpdateClipboardHistoryMenuItem();
+        menu.Items.Add(_clipboardHistoryMenuItem);
+        menu.Items.Add(CreateMenuItem("開啟 Clippings 資料夾", OpenDataFolder));
         menu.Items.Add(CreateMenuItem("設定", () => ShowMainWindow(2)));
         menu.Items.Add(CreateSeparator());
         menu.Items.Add(CreateMenuItem("結束", ExitApplication));
 
         return menu;
+    }
+
+    private void OnRecordingStateChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            UpdateRecordingMenuItems();
+        }
+        else
+        {
+            _ = Dispatcher.BeginInvoke(UpdateRecordingMenuItems);
+        }
+    }
+
+    private void UpdateRecordingMenuItems()
+    {
+        if (_recording is null || _startRecordingMenuItem is null || _startFullScreenRecordingMenuItem is null || _stopRecordingMenuItem is null || _openRecordingMenuItem is null)
+        {
+            return;
+        }
+
+        var state = _recording.State;
+        var idle = state == RecordingState.Idle;
+        _startRecordingMenuItem.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
+        _startFullScreenRecordingMenuItem.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
+        _startRecordingMenuItem.IsEnabled = _recording.CanStartRecording;
+        _startFullScreenRecordingMenuItem.IsEnabled = _recording.CanStartRecording;
+        _stopRecordingMenuItem.Visibility = idle ? Visibility.Collapsed : Visibility.Visible;
+        _stopRecordingMenuItem.IsEnabled = state is RecordingState.Starting or RecordingState.Countdown or RecordingState.Recording or RecordingState.Paused;
+        _openRecordingMenuItem.IsEnabled = _recording.LastOutputPath is { } path && File.Exists(path);
+        if (_trayIcon is not null)
+        {
+            _trayIcon.ToolTipText = state switch
+            {
+                RecordingState.Recording => AppStrings.RecordingTrayToolTip,
+                RecordingState.Paused => AppStrings.RecordingTrayToolTipPaused,
+                _ => AppStrings.AppName,
+            };
+        }
+    }
+
+    private void UpdateClipboardHistoryMenuItem()
+    {
+        if (_clipboardHistoryMenuItem is not null && State is not null)
+        {
+            _clipboardHistoryMenuItem.Header = State.Settings.ClipboardHistoryEnabled
+                ? "暫停剪貼簿歷史"
+                : "啟用剪貼簿歷史";
+        }
+    }
+
+    private void ToggleClipboardHistory()
+    {
+        if (State is null)
+        {
+            return;
+        }
+
+        var settings = State.Settings.Clone();
+        settings.ClipboardHistoryEnabled = !settings.ClipboardHistoryEnabled;
+        State.Save(settings);
+    }
+
+    private void OpenDataFolder()
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo(PathUtil.DefaultDataRoot) { UseShellExecute = true });
+        }
+        catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or InvalidOperationException)
+        {
+            _logger?.LogWarning(exception, "無法開啟 Clippings 資料夾。");
+            _notifications?.Show("無法開啟 Clippings 資料夾。", isError: true);
+        }
     }
 
     private static void ApplyWindowsThemeToTrayMenu(ContextMenu menu)
@@ -459,6 +572,7 @@ public partial class App : Application
         _clipboardWatcher?.SetEnabled(settings.ClipboardHistoryEnabled);
         StartupRegistrar.SetEnabled(settings.StartWithWindows);
         _mainWindow?.RefreshSettingsSummary();
+        UpdateClipboardHistoryMenuItem();
     }
 
     internal void ApplyTheme(AppTheme theme)
@@ -483,6 +597,19 @@ public partial class App : Application
         IsExiting = true;
         _mainWindow = null;
         _annotations?.Stop();
+
+        if (_recording is not null)
+        {
+            _recording.StateChanged -= OnRecordingStateChanged;
+            try
+            {
+                _recording.StopAsync().WaitAsync(TimeSpan.FromSeconds(15)).GetAwaiter().GetResult();
+            }
+            catch (Exception exception) when (exception is OperationCanceledException or TimeoutException)
+            {
+                _logger?.LogWarning(exception, "結束程式時等待錄影完成逾時。");
+            }
+        }
 
         if (_clipboardWatcher is not null)
         {

@@ -38,6 +38,12 @@
                             DockPanel.Dock="Right"
                             HorizontalAlignment="Right"
                             VerticalAlignment="Center">
+                    <CheckBox x:Name="PinnedFilter"
+                              Content="只看釘選"
+                              Margin="0,0,12,0"
+                              ToolTip="只顯示已釘選的圖片"
+                              Checked="OnFilterChanged"
+                              Unchecked="OnFilterChanged" />
                     <Button Content="{x:Static strings:AppStrings.ActionRefresh}"
                             Style="{StaticResource SecondaryButtonStyle}"
                             Margin="0,0,8,0"
@@ -63,12 +69,26 @@
                  Grid.Row="1"
                  Margin="0,16,0,0"
                  ItemContainerStyle="{StaticResource ClipboardCardListItemStyle}"
+                 MouseDoubleClick="OnItemDoubleClick"
+                 KeyDown="OnItemsKeyDown"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ScrollViewer.VerticalScrollBarVisibility="Auto"
-                 ScrollViewer.CanContentScroll="False">
+                 ScrollViewer.CanContentScroll="True">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Style="{StaticResource CardBorderStyle}" Padding="12">
+                            <Border.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="複製圖片" Click="OnCopyClick" />
+                                    <MenuItem Header="加入擷取" Click="OnAddToCaptureClick" />
+                                    <Separator />
+                                    <MenuItem Header="在檔案總管中顯示" Click="OnRevealClick" />
+                                    <MenuItem Header="複製檔案路徑" Click="OnCopyPathClick" />
+                                    <Separator />
+                                    <MenuItem Header="釘選／取消釘選" Click="OnPinClick" />
+                                    <MenuItem Header="刪除" Click="OnDeleteClick" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
@@ -103,15 +123,28 @@
                                 </StackPanel>
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
-                                    <Button Content="複製" Style="{StaticResource IconButtonStyle}" Click="OnCopyClick" />
+                                    <Button Content="複製"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="OnCopyClick"
+                                            ToolTip="複製圖片到剪貼簿"
+                                            AutomationProperties.Name="複製圖片" />
                                     <Button x:Name="AddToCaptureButton"
                                             Content="{x:Static strings:AppStrings.ActionAddToCapture}"
                                             ToolTipService.ToolTip="{x:Static strings:AppStrings.ActionAddToCaptureToolTip}"
                                             AutomationProperties.Name="{x:Static strings:AppStrings.ActionAddToCaptureToolTip}"
                                             Style="{StaticResource IconButtonStyle}"
                                             Click="OnAddToCaptureClick" />
-                                    <Button x:Name="PinButton" Content="釘選" Style="{StaticResource IconButtonStyle}" Click="OnPinClick" />
-                                    <Button Content="刪除" Style="{StaticResource IconButtonStyle}" Click="OnDeleteClick" />
+                                    <Button x:Name="PinButton"
+                                            Content="釘選"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="OnPinClick"
+                                            ToolTip="釘選或取消釘選"
+                                            AutomationProperties.Name="釘選或取消釘選" />
+                                    <Button Content="刪除"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="OnDeleteClick"
+                                            ToolTip="刪除這筆剪貼簿紀錄"
+                                            AutomationProperties.Name="刪除剪貼簿紀錄" />
                                 </StackPanel>
                             </Grid>
                         </Border>

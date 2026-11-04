@@ -26,7 +26,7 @@ flowchart TB
     end
 
     subgraph Platform["Clippings.Platform"]
-        CAP["Capture / Display<br/>GDI、Monitor、DPI"]
+        CAP["Capture / Display<br/>WGC、GDI、Monitor、DPI"]
         IMG["Imaging<br/>SkiaSharp"]
         STORE["Storage<br/>EF Core + SQLite、JSON、Run 登錄"]
         INT["Interop<br/>Win32 P/Invoke"]
@@ -57,7 +57,7 @@ flowchart TB
 | 專案 | 目標框架 | 責任 |
 | --- | --- | --- |
 | `Clippings.Core` | `net10.0-windows10.0.19041.0` | 純資料模型、設定、`PixelRect`、`UndoStack`、雜湊、路徑、快捷鍵格式、命令列解析、儲存介面 |
-| `Clippings.Platform` | 同上 | Win32 螢幕擷取、螢幕列舉與 DPI、SkiaSharp 編碼、EF Core/SQLite、JSON 設定、開機登錄、單一實例管線、主控台附加 |
+| `Clippings.Platform` | 同上 | Windows.Graphics.Capture／GDI 螢幕擷取、螢幕列舉與 DPI、SkiaSharp 編碼、EF Core/SQLite、JSON 設定、開機登錄、單一實例管線、主控台附加 |
 | `Clippings.App` | 同上（`UseWPF`） | WPF 視窗與頁面、DI Host、系統匣、擷取協調、剪貼簿監聽、全域熱鍵、主題、日誌 |
 | `Clippings.Core.Tests` | 同上 | `Core` 的單元測試（xUnit） |
 
@@ -81,6 +81,9 @@ flowchart LR
     CW["ClipboardWatcher"] --> APP
     SI["SingleInstanceService"] --> APP
     APP --> COORD["CaptureCoordinator"]
+    APP --> REC["RecordingCoordinator"]
+    REC --> WGCR["WindowsGraphicsRecordingService"]
+    WGCR --> MP4["MediaTranscoder<br/>H.264 MP4"]
     COORD --> OVERLAY["CaptureOverlayWindow<br/>每螢幕一個"]
     COORD --> EDITOR["EditorWindow"]
     COORD --> CAP["ScreenCaptureService"]
@@ -100,11 +103,18 @@ flowchart LR
 | 元件 | 生命週期 | 主要職責 |
 | --- | --- | --- |
 | `App` | 整個程式 | 解析命令列、建立 Host、初始化系統匣與服務、處理單一實例轉送 |
-| `MainWindow` | 單例，可隱藏 | 三頁導覽、關閉時縮到系統匣 |
+| `MainWindow` | 單例，可隱藏 | 三頁導覽、錄影控制與計時、完成檔案操作、關閉時縮到系統匣 |
 | `HistoryPage` | 首次導覽時建立 | 擷取歷史查詢與操作 |
 | `ClipboardPage` | 首次導覽時建立 | 剪貼簿歷史查詢與操作 |
-| `SettingsPage` | 首次導覽時建立 | 設定編輯、快捷鍵錄製、儲存 |
+| `SettingsPage` | 首次導覽時建立 | 設定編輯、快捷鍵錄製、錄影輸出選項、儲存 |
 | `CaptureCoordinator` | 單例 | 協調擷取流程、覆蓋層、儲存、複製、自動存檔與編輯器 |
+| `RecordingCoordinator` | 單例 | 管理視窗／螢幕錄影、準備／倒數／錄影／暫停狀態、開始／停止、輸出路徑與通知 |
+| `RecordingTargetPicker` | 單例 | 顯示可錄製視窗清單並回傳使用者選定的視窗 |
+| `RecordingCountdownService` | 單例 | 在目標中央顯示不搶焦點且排除擷取的浮動倒數 |
+| `RecordingOverlayService` | 單例 | 管理錄影中控制列，顯示時間、目標名稱與暫停／繼續／停止 |
+| `RecordingOverlayWindow` | 每次錄影 | 目標螢幕右上角的浮動控制列 |
+| `RecordingControl` | 每次錄影 | 可暫停計時器與 sample request 暫停 gate |
+| `WindowsGraphicsRecordingService` | 每次錄影建立內部 session | WGC frame、latest-frame slot、MediaStreamSource、H.264 MP4 完檔 |
 | `CaptureOverlayWindow` | 每次框選 | 凍結畫面、框選、放大鏡、浮動操作列 |
 | `EditorWindow` | 每次編輯 | 標註、裁切、旋轉／翻轉、復原／重做、複製／儲存 |
 | `GlobalHotkeyService` | 單例 | `RegisterHotKey`、訊息視窗、快捷鍵分派 |
@@ -144,9 +154,9 @@ sequenceDiagram
 
 重點：
 
-- 擷取前先隱藏 Clippings 主視窗，避免拍到自身。
+- 主視窗可見時才先隱藏，避免拍到自身；未顯示時不等待隱藏動畫。
 - 先擷取整個虛擬桌面，再依螢幕裁切成各自的覆蓋層影像，確保框選時畫面靜止。
-- 完成後才進行 PNG 編碼與縮圖，編碼工作放在背景執行緒。
+- 完成後先複製到剪貼簿，再於背景執行 PNG 編碼、縮圖與歷史寫入。
 
 ### 4.2 全螢幕、目前螢幕與目前視窗
 
@@ -154,10 +164,41 @@ sequenceDiagram
 | --- | --- | --- |
 | 全螢幕 | 所有螢幕的聯集 | 直接進入儲存與複製流程 |
 | 目前螢幕 | 游標所在螢幕 | 裁切後進入儲存與複製流程 |
-| 目前視窗 | 前景視窗的可見邊界（DWM 擴充框） | 與目前螢幕相同 |
+| 目前視窗 | Windows.Graphics.Capture；不可用時退回前景視窗可見邊界（DWM 擴充框） | 與目前螢幕相同 |
 | 延遲 | 倒數後改走區域框選 | 與區域擷取相同 |
 
-### 4.3 剪貼簿歷史
+### 4.3 螢幕錄影
+
+```mermaid
+sequenceDiagram
+    participant U as 主視窗／系統匣
+    participant P as RecordingTargetPicker
+    participant R as RecordingCoordinator
+    participant W as WindowsGraphicsRecordingService
+    participant G as Windows.Graphics.Capture
+    participant M as MediaTranscoder
+    participant O as RecordingOverlayWindow
+
+    U->>R: 選擇視窗錄影／全螢幕錄影
+    R->>P: 顯示可錄製視窗清單（視窗模式）
+    P-->>R: 視窗目標
+    R->>R: 建立 RecordingTarget（HWND 或 HMONITOR）
+    R->>W: RecordWindowAsync／RecordMonitorAsync
+    W->>G: 建立固定尺寸 frame pool
+    W->>M: PrepareMediaStreamSourceTranscodeAsync
+    W->>R: 執行浮動倒數（選用）
+    R->>R: 重新驗證目標
+    W->>G: StartCapture
+    R->>O: 顯示錄影中控制列
+    U->>R: 停止錄影
+    R->>W: CancellationToken
+    W-->>M: EOS，等待 MP4 完檔
+    W-->>R: RecordingResult
+```
+
+錄影維持固定輸出尺寸；目標關閉或尺寸改變會送出 EOS。暫停時 sample request 會暫停，時間軸不前進。暫存檔完成封裝後才改名為 MP4，不寫入圖片歷史資料庫。
+
+### 4.4 剪貼簿歷史
 
 ```mermaid
 sequenceDiagram
@@ -170,7 +211,7 @@ sequenceDiagram
     OS->>CW: WM_CLIPBOARDUPDATE
     CW->>CW: 重新啟動 260 ms 去抖計時器
     CW->>CW: 僅處理圖片（文字與檔案不記錄）
-    CW->>CW: 計算 SHA-256、略過重複內容
+    CW->>CW: 先以原始像素計算 SHA-256，重複時不編碼
     CW->>APP: Captured(snapshot)
     APP->>DB: AddClipboardItemAsync
     APP->>DB: 超過上限 + 20 時 TrimClipboardItemsAsync
@@ -179,7 +220,7 @@ sequenceDiagram
 
 優先順序為檔案 → 圖片 → 文字。相同雜湊只更新時間，不新增資料列。
 
-### 4.4 單一實例與命令列轉送
+### 4.5 單一實例與命令列轉送
 
 ```mermaid
 sequenceDiagram
@@ -201,7 +242,7 @@ sequenceDiagram
     end
 ```
 
-### 4.5 設定變更
+### 4.6 設定變更
 
 ```mermaid
 flowchart LR
@@ -222,6 +263,9 @@ flowchart LR
 | --- | --- | --- |
 | UI 操作、視窗生命週期 | WPF Dispatcher | 所有 WPF 控制項只能在此執行緒存取 |
 | 螢幕擷取（GDI `BitBlt`） | `Task.Run` | 避免阻塞 UI |
+| 視窗擷取（Windows.Graphics.Capture） | free-threaded frame pool | 首幀複製完成後轉為 `SKBitmap` |
+| 螢幕錄影 frame | free-threaded frame pool | latest-frame slot；未送出的舊 frame 立即丟棄 |
+| H.264 MP4 編碼 | MediaStreamSource／MediaTranscoder | GPU surface 樣本、正常 EOS 完檔 |
 | 影像編碼、縮圖、解碼 | `Task.Run` | SkiaSharp 操作 |
 | 剪貼簿圖片編碼 | `Task.Run` | 完成後再切回 Dispatcher 觸發事件 |
 | 剪貼簿去抖 | `DispatcherTimer`（260 ms） | 避免短時間內重複處理 |
@@ -286,7 +330,7 @@ flowchart LR
 
 ## 10. 設計限制
 
-- 擷取使用 GDI `BitBlt`，不支援 Windows.Graphics.Capture 的離屏擷取。
+- 區域、全螢幕與螢幕擷取仍使用 GDI `BitBlt`；Windows.Graphics.Capture 目前僅用於目前視窗的單張擷取。
 - 框選一次僅限單一螢幕。
 - 混合 DPI 多螢幕僅以 100% 縮放實測。
 - 介面文字尚未外部化為 `.resw`／`.resx`。

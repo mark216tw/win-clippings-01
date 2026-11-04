@@ -3,7 +3,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
+using System.Windows.Threading;
+using Clippings.App.Helpers;
 using Clippings.App.Services;
+using Clippings.App.Strings;
+using Clippings.Core.Models;
 using Clippings.Platform.Interop;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -14,6 +18,8 @@ public partial class MainWindow : Window
     private readonly IServiceProvider _services;
     private readonly AppState _state;
     private readonly CaptureCoordinator _coordinator;
+    private readonly RecordingCoordinator _recording;
+    private readonly DispatcherTimer _recordingTimer;
 
     private HistoryPage? _historyPage;
     private ClipboardPage? _clipboardPage;
@@ -25,13 +31,19 @@ public partial class MainWindow : Window
     public MainWindow(
         IServiceProvider services,
         AppState state,
-        CaptureCoordinator coordinator)
+        CaptureCoordinator coordinator,
+        RecordingCoordinator recording)
     {
         InitializeComponent();
+        WindowSizingHelper.ClampToWorkArea(this);
 
         _services = services;
         _state = state;
         _coordinator = coordinator;
+        _recording = recording;
+        _recording.StateChanged += OnRecordingStateChanged;
+        _recordingTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, OnRecordingTimerTick, Dispatcher);
+        _recordingTimer.Stop();
 
         var informational = Assembly.GetExecutingAssembly()
             .GetCustomAttribute<System.Reflection.AssemblyInformationalVersionAttribute>()?.InformationalVersion;
@@ -39,6 +51,7 @@ public partial class MainWindow : Window
             ? "v1.8.4"
             : $"v{informational.Split('+')[0]}";
         RefreshSettingsSummary();
+        UpdateRecordingControls();
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -175,10 +188,99 @@ public partial class MainWindow : Window
         };
     }
 
+    private void OnSelectWindowRecordingClick(object sender, RoutedEventArgs e)
+        => _ = _recording.StartWithSelectionAsync();
+
+    private void OnFullScreenRecordingClick(object sender, RoutedEventArgs e)
+        => _ = _recording.StartFullScreenAsync();
+
+    private void OnRecordingActionClick(object sender, RoutedEventArgs e)
+    {
+        _ = _recording.State == RecordingState.Idle
+            ? _recording.StartWithSelectionAsync()
+            : _recording.StopAsync();
+    }
+
+    private void OnOpenRecordingClick(object sender, RoutedEventArgs e)
+        => _ = _recording.OpenLastRecording();
+
+    private void OnOpenRecordingFolderClick(object sender, RoutedEventArgs e)
+        => _ = _recording.OpenRecordingFolder();
+
+    private void OnRecordingStateChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            UpdateRecordingControls();
+        }
+        else
+        {
+            _ = Dispatcher.BeginInvoke(UpdateRecordingControls);
+        }
+    }
+
+    private void OnRecordingTimerTick(object? sender, EventArgs e)
+        => UpdateRecordingControls();
+
+    private void UpdateRecordingControls()
+    {
+        var state = _recording.State;
+        var idle = state == RecordingState.Idle;
+        SelectWindowRecordingButton.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
+        FullScreenRecordingButton.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
+        SelectWindowRecordingButton.IsEnabled = idle && _recording.CanStartRecording;
+        FullScreenRecordingButton.IsEnabled = idle && _recording.CanStartRecording;
+        RecordingActionButton.Visibility = idle ? Visibility.Collapsed : Visibility.Visible;
+
+        RecordingActionButton.Content = state switch
+        {
+            RecordingState.Countdown => "取消倒數",
+            RecordingState.Starting => "取消準備",
+            RecordingState.Recording => "停止錄影",
+            RecordingState.Paused => "停止錄影",
+            RecordingState.Stopping => "正在完成…",
+            _ => "停止錄影",
+        };
+        RecordingActionButton.IsEnabled = state != RecordingState.Stopping;
+
+        RecordingStatusText.Text = state switch
+        {
+            RecordingState.Countdown => $"將在 {_recording.RemainingDelaySeconds ?? 0} 秒後開始…",
+            RecordingState.Starting => "正在準備 H.264 編碼器…",
+            RecordingState.Recording => $"錄影中  {FormatElapsedTime()}",
+            RecordingState.Paused => $"{AppStrings.RecordingPausedStatus}  {FormatElapsedTime()}",
+            RecordingState.Stopping => "正在完成 MP4，請稍候…",
+            _ when _recording.IsPreparing => "正在準備錄影…",
+            _ when _recording.LastOutputPath is not null => "上次錄影已完成",
+            _ => "尚未錄影",
+        };
+
+        if (state is RecordingState.Recording or RecordingState.Paused)
+        {
+            _recordingTimer.Start();
+        }
+        else
+        {
+            _recordingTimer.Stop();
+        }
+
+        OpenRecordingButton.IsEnabled = _recording.LastOutputPath is { } path && File.Exists(path);
+        OpenRecordingFolderButton.IsEnabled = idle;
+    }
+
+    private string FormatElapsedTime()
+        => $"{(int)_recording.Elapsed.TotalHours:00}:{_recording.Elapsed.Minutes:00}:{_recording.Elapsed.Seconds:00}";
+
     public void RefreshSettingsSummary()
     {
         var settings = _state.Settings;
         HotkeyHint.Text = $"區域 {settings.HotkeyRegion}\n全螢幕 {settings.HotkeyFullScreen}\n視窗 {settings.HotkeyWindow}\n延遲 {settings.HotkeyDelayed}";
+
+        RegionCaptureButton.ToolTip = $"{AppStrings.CaptureRegion} ({settings.HotkeyRegion})";
+        FullScreenCaptureButton.ToolTip = $"{AppStrings.CaptureFullScreen} ({settings.HotkeyFullScreen})";
+        MonitorCaptureButton.ToolTip = "目前螢幕擷取";
+        WindowCaptureButton.ToolTip = $"{AppStrings.CaptureWindow} ({settings.HotkeyWindow})";
+        DelayedCaptureButton.ToolTip = $"{AppStrings.CaptureDelayed} ({settings.HotkeyDelayed})";
     }
 
     public void UpdateHotkeyStatus(IReadOnlyList<string> failures)
@@ -221,6 +323,8 @@ public partial class MainWindow : Window
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        _recording.StateChanged -= OnRecordingStateChanged;
+        _recordingTimer.Stop();
         _settingsPage?.StopHotkeyRecording();
         _historyPage = null;
         _clipboardPage = null;

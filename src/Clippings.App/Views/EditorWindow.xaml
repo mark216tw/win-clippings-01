@@ -236,7 +236,7 @@
                         </StackPanel>
                     </Button>
                     <Button x:Name="FitButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnFitClick"
-                            ToolTip="縮放至符合視窗" AutomationProperties.Name="符合視窗">
+                            ToolTip="縮放至符合視窗 (Ctrl+0)" AutomationProperties.Name="符合視窗">
                         <StackPanel Orientation="Horizontal">
                             <Path Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"
                                   Data="M2,6 L2,2 L6,2 M10,2 L14,2 L14,6 M14,10 L14,14 L10,14 M6,14 L2,14 L2,10"
@@ -314,7 +314,7 @@
                            Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Margin="12,0,0,0" />
                 <TextBlock x:Name="StatusText"
                            Style="{StaticResource CaptionStyle}" VerticalAlignment="Center"
-                             Text="選擇工具後在圖片內拖曳；中鍵或右鍵可快速平移，滾輪縮放。" />
+                           Text="選擇工具後在圖片內拖曳；中鍵或右鍵可快速平移，滾輪或 Ctrl+加減縮放，Ctrl+0 符合視窗。" />
             </DockPanel>
         </Border>
     </Grid>

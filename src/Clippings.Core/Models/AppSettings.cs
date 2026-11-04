@@ -42,10 +42,13 @@ public sealed class AppSettings
 
     public AnnotationSettings Annotation { get; set; } = new();
 
+    public RecordingSettings Recording { get; set; } = new();
+
     public AppSettings Clone()
     {
         var clone = (AppSettings)MemberwiseClone();
         clone.Annotation = Annotation.Clone();
+        clone.Recording = Recording.Clone();
         return clone;
     }
 }

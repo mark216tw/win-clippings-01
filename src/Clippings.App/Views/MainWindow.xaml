@@ -44,27 +44,42 @@
                     <Border Style="{StaticResource CardBorderStyle}" Padding="12" Margin="0,0,0,12">
                         <StackPanel>
                             <TextBlock Text="快速擷取" Style="{StaticResource SectionTitleStyle}" FontSize="13" />
-                             <Button Content="區域擷取"
+                             <Button x:Name="RegionCaptureButton"
+                                     Content="區域擷取"
                                      Style="{StaticResource PrimaryButtonStyle}"
                                      Margin="0,8,0,0"
                                      Tag="Region"
+                                     ToolTip="區域擷取"
+                                     AutomationProperties.Name="區域擷取"
                                      Click="OnCaptureClick" />
                             <UniformGrid Columns="2" Margin="0,6,0,0">
-                                <Button Content="全螢幕"
+                                <Button x:Name="FullScreenCaptureButton"
+                                        Content="全螢幕"
                                         Style="{StaticResource IconButtonStyle}"
                                         Tag="FullScreen"
+                                        ToolTip="全螢幕擷取"
+                                        AutomationProperties.Name="全螢幕擷取"
                                         Click="OnCaptureClick" />
-                                <Button Content="目前螢幕"
+                                <Button x:Name="MonitorCaptureButton"
+                                        Content="目前螢幕"
                                         Style="{StaticResource IconButtonStyle}"
                                         Tag="Monitor"
+                                        ToolTip="目前螢幕擷取"
+                                        AutomationProperties.Name="目前螢幕擷取"
                                         Click="OnCaptureClick" />
-                                <Button Content="目前視窗"
+                                <Button x:Name="WindowCaptureButton"
+                                        Content="目前視窗"
                                         Style="{StaticResource IconButtonStyle}"
                                         Tag="Window"
+                                        ToolTip="目前視窗擷取"
+                                        AutomationProperties.Name="目前視窗擷取"
                                         Click="OnCaptureClick" />
-                                <Button Content="延遲"
+                                <Button x:Name="DelayedCaptureButton"
+                                        Content="延遲"
                                         Style="{StaticResource IconButtonStyle}"
                                         Tag="Delayed"
+                                        ToolTip="延遲擷取"
+                                        AutomationProperties.Name="延遲擷取"
                                         Click="OnCaptureClick" />
                             </UniformGrid>
                              <TextBlock x:Name="HotkeyHint"
@@ -77,6 +92,42 @@
                                        Margin="0,5,0,0"
                                        TextWrapping="Wrap"
                                        Visibility="Collapsed" />
+                        </StackPanel>
+                    </Border>
+                    <Border Style="{StaticResource CardBorderStyle}" Padding="12" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="螢幕錄影" Style="{StaticResource SectionTitleStyle}" FontSize="13" />
+                            <TextBlock x:Name="RecordingStatusText"
+                                       Text="尚未錄影"
+                                       Style="{StaticResource CaptionStyle}"
+                                       Margin="0,6,0,0"
+                                       TextWrapping="Wrap" />
+                            <Button x:Name="FullScreenRecordingButton"
+                                    Content="全螢幕錄影"
+                                    Style="{StaticResource SecondaryButtonStyle}"
+                                    Margin="0,8,0,0"
+                                    Click="OnFullScreenRecordingClick" />
+                            <Button x:Name="SelectWindowRecordingButton"
+                                    Content="選擇視窗錄影"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Margin="0,6,0,0"
+                                    Click="OnSelectWindowRecordingClick" />
+                            <Button x:Name="RecordingActionButton"
+                                    Content="開始錄影"
+                                    Style="{StaticResource PrimaryButtonStyle}"
+                                    Margin="0,8,0,0"
+                                    Visibility="Collapsed"
+                                    Click="OnRecordingActionClick" />
+                            <UniformGrid Columns="2" Margin="0,6,0,0">
+                                <Button x:Name="OpenRecordingButton"
+                                        Content="開啟影片"
+                                        Style="{StaticResource IconButtonStyle}"
+                                        Click="OnOpenRecordingClick" />
+                                <Button x:Name="OpenRecordingFolderButton"
+                                        Content="開啟資料夾"
+                                        Style="{StaticResource IconButtonStyle}"
+                                        Click="OnOpenRecordingFolderClick" />
+                            </UniformGrid>
                         </StackPanel>
                     </Border>
                     <TextBlock x:Name="VersionText" Style="{StaticResource CaptionStyle}" Margin="4,0,0,0" />

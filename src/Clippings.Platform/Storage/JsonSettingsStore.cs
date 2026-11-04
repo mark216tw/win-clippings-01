@@ -42,7 +42,10 @@ public sealed class JsonSettingsStore : ISettingsStore
             try
             {
                 var json = File.ReadAllText(_path);
-                return JsonSerializer.Deserialize<AppSettings>(json, Options) ?? new AppSettings();
+                var settings = JsonSerializer.Deserialize<AppSettings>(json, Options) ?? new AppSettings();
+                settings.Annotation ??= new AnnotationSettings();
+                settings.Recording ??= new RecordingSettings();
+                return settings;
             }
             catch (JsonException)
             {

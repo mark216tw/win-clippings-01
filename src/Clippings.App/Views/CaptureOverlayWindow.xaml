@@ -150,7 +150,7 @@
                 CornerRadius="16"
                 Padding="16,8"
                 IsHitTestVisible="False">
-            <TextBlock Text="拖曳選擇範圍；選取後可拖曳框內移動、拖曳邊角調整大小　·　Enter 複製　·　Ctrl+E 編輯　·　Ctrl+S 儲存　·　Esc 取消"
+            <TextBlock Text="拖曳選擇範圍；按住 Shift 拖曳為正方形；選取後可用方向鍵微調（Shift 每次 10px）　·　Enter 複製　·　Ctrl+E 編輯　·　Ctrl+S 儲存　·　Esc 取消"
                        Foreground="{DynamicResource ToolbarTextBrush}"
                        FontSize="12"
                        TextWrapping="Wrap"

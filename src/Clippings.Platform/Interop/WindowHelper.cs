@@ -7,7 +7,19 @@ namespace Clippings.Platform.Interop;
 public static class WindowHelper
 {
     public static bool ExcludeFromCapture(IntPtr handle)
-        => handle != IntPtr.Zero && NativeMethods.SetWindowDisplayAffinity(handle, NativeMethods.WdaExcludeFromCapture);
+    {
+        if (handle == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        if (NativeMethods.SetWindowDisplayAffinity(handle, NativeMethods.WdaExcludeFromCapture))
+        {
+            return true;
+        }
+
+        return NativeMethods.SetWindowDisplayAffinity(handle, NativeMethods.WdaMonitor);
+    }
 
     public static void SetClickThrough(IntPtr handle, bool clickThrough)
     {
@@ -20,6 +32,18 @@ public static class WindowHelper
         style = clickThrough
             ? style | NativeMethods.WsExTransparent
             : style & ~NativeMethods.WsExTransparent;
+        _ = NativeMethods.SetWindowLongPtr(handle, NativeMethods.GwlExStyle, new IntPtr(style));
+    }
+
+    public static void SetOverlayWindowStyles(IntPtr handle)
+    {
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var style = NativeMethods.GetWindowLongPtr(handle, NativeMethods.GwlExStyle).ToInt64();
+        style |= NativeMethods.WsExNoActivate | NativeMethods.WsExToolWindow;
         _ = NativeMethods.SetWindowLongPtr(handle, NativeMethods.GwlExStyle, new IntPtr(style));
     }
 
@@ -112,6 +136,27 @@ public static class WindowHelper
 
     public static bool TryGetForegroundCaptureTarget(out WindowCaptureTarget target)
         => TryCreateCaptureTarget(NativeMethods.GetForegroundWindow(), out target);
+
+    public static bool TryActivateWindow(WindowCaptureTarget target, bool restoreIfMinimized = false)
+    {
+        if (target.Handle == IntPtr.Zero || !NativeMethods.IsWindow(target.Handle))
+        {
+            return false;
+        }
+
+        _ = NativeMethods.GetWindowThreadProcessId(target.Handle, out var processId);
+        if (processId == 0 || processId != target.ProcessId)
+        {
+            return false;
+        }
+
+        if (restoreIfMinimized && NativeMethods.IsIconic(target.Handle))
+        {
+            _ = NativeMethods.ShowWindowAsync(target.Handle, NativeMethods.SwRestore);
+        }
+
+        return NativeMethods.SetForegroundWindow(target.Handle);
+    }
 
     public static bool TryCreateCaptureTarget(IntPtr handle, out WindowCaptureTarget target)
     {

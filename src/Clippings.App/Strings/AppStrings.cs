@@ -1,3 +1,5 @@
+using Clippings.Core.Models;
+
 namespace Clippings.App.Strings;
 
 public static class AppStrings
@@ -22,6 +24,15 @@ public static class AppStrings
     public const string CaptureDelayed = "延遲擷取";
     public const string CaptureWindow = "視窗擷取";
     public const string ScreenAnnotation = "螢幕標註";
+    public const string StartWindowRecording = "選擇視窗錄影";
+    public const string StartFullScreenRecording = "全螢幕錄影";
+    public const string RecordingFullScreen = "全螢幕";
+    public const string StopRecording = "停止錄影";
+    public const string PauseRecording = "暫停錄影";
+    public const string ResumeRecording = "繼續錄影";
+    public const string RecordingPausedStatus = "已暫停";
+    public const string OpenLastRecording = "開啟上次錄影";
+    public const string OpenRecordingFolder = "開啟錄影資料夾";
     public const string CaptureSourceFromClipboard = "剪貼簿匯入";
 
     public const string ActionUndo = "復原";
@@ -57,6 +68,11 @@ public static class AppStrings
     public const string ClipboardCopiedSelection = "已複製選取範圍到剪貼簿。";
     public const string ClipboardCopyFailed = "複製失敗，剪貼簿可能被其他程式佔用。";
     public const string CopyImageMissingFile = "圖片檔已不存在，無法複製。";
+    public const string FileMissing = "檔案已不存在。";
+    public const string FilePathCopied = "已複製檔案路徑。";
+    public const string FilePathCopyFailed = "複製檔案路徑失敗，剪貼簿可能被其他程式佔用。";
+    public const string RevealedInExplorer = "已在檔案總管中顯示。";
+    public const string RevealInExplorerFailed = "無法在檔案總管中顯示檔案。";
     public const string Saved = "已儲存。";
     public const string DeleteConfirmTitle = "刪除項目";
     public const string DeleteConfirmMessage = "確定要刪除這個項目嗎？此動作無法復原。";
@@ -71,6 +87,13 @@ public static class AppStrings
     public const string ClipboardHistorySaveFailed = "無法寫入剪貼簿歷史。";
     public const string AutoSaveFailed = "擷取已完成，但自動存檔失敗。";
     public const string CommandLineForwardFailed = "無法連線到執行中的 Clippings，指令未送出。";
+    public const string RecordingStarted = "已開始錄影。";
+    public const string RecordingUnsupported = "此 Windows 版本或顯示環境不支援螢幕錄影。";
+    public const string RecordingTargetUnavailable = "所選視窗已無法錄製，請重新選擇。";
+    public const string RecordingMonitorUnavailable = "找不到可錄製的螢幕。";
+    public const string RecordingResizeWarning = "錄影開始後若調整所選視窗的大小，錄影會自動停止。";
+    public const string RecordingTrayToolTip = "Clippings 剪貼簿（正在錄影）";
+    public const string RecordingTrayToolTipPaused = "Clippings 剪貼簿（錄影已暫停）";
     public const string CommandLineUsage = """
         Clippings 命令列參數
 
@@ -104,6 +127,23 @@ public static class AppStrings
 
     public static string FormatDeleteAllCapturesResult(int count)
         => $"已刪除 {count} 張未收藏的擷取；收藏的圖片已保留。";
+
+    public static string FormatRecordingSaved(string path, RecordingStopReason reason)
+    {
+        var detail = reason switch
+        {
+            RecordingStopReason.TargetClosed => "目標視窗已關閉，錄影已自動停止。",
+            RecordingStopReason.TargetResized => "目標視窗尺寸已改變，錄影已自動停止。",
+            _ => "錄影已儲存。",
+        };
+        return $"{detail}{Environment.NewLine}{path}";
+    }
+
+    public static string FormatRecordingFailed(string message)
+        => $"錄影失敗：{message}";
+
+    public static string FormatOpenRecordingFailed(string message)
+        => $"無法開啟錄影：{message}";
 
     public static string FormatSize(int width, int height) => $"{width} × {height}";
 }

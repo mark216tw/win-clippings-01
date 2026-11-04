@@ -90,7 +90,7 @@ dotnet publish src/Clippings.App/Clippings.App.csproj `
 ### 4.3 打包 ZIP
 
 ```powershell
-$version = "1.13.1"
+$version = "1.19.0"
 New-Item -ItemType Directory -Force artifacts | Out-Null
 
 # x64 精簡版（排除 PDB）
@@ -116,9 +116,9 @@ Get-FileHash "artifacts\Clippings-$version-win-arm64-framework-dependent.zip" -A
 版本集中於 `Directory.Build.props`：
 
 ```xml
-<Version>1.13.1</Version>
-<AssemblyVersion>1.13.0.0</AssemblyVersion>
-<FileVersion>1.13.1.0</FileVersion>
+<Version>1.19.0</Version>
+<AssemblyVersion>1.19.0.0</AssemblyVersion>
+<FileVersion>1.19.0.0</FileVersion>
 ```
 
 - `Version`：`主.次.修`，每次功能變更遞增。
@@ -147,22 +147,22 @@ Get-FileHash "artifacts\Clippings-$version-win-arm64-framework-dependent.zip" -A
 
 ```powershell
 # 建立標籤
-git tag v1.13.1
-git push origin v1.13.1
+git tag v1.19.0
+git push origin v1.19.0
 
 # 建立 Release 並上傳兩個資產
-gh release create v1.13.1 `
-  "artifacts\Clippings-1.13.1-win-x64-framework-dependent.zip" `
-  "artifacts\Clippings-1.13.1-win-arm64-framework-dependent.zip" `
-  --title "Clippings 剪貼簿 1.13.1" `
-  --notes-file "artifacts\release-notes-1.13.1.md"
+gh release create v1.19.0 `
+  "artifacts\Clippings-1.19.0-win-x64-framework-dependent.zip" `
+  "artifacts\Clippings-1.19.0-win-arm64-framework-dependent.zip" `
+  --title "Clippings 剪貼簿 1.19.0" `
+  --notes-file "artifacts\release-notes-1.19.0.md"
 ```
 
 若 Release 已存在，改用 `gh release upload` 補上資產：
 
 ```powershell
-gh release upload v1.13.1 "artifacts\Clippings-1.13.1-win-x64-framework-dependent.zip" "artifacts\Clippings-1.13.1-win-arm64-framework-dependent.zip"
-gh release edit v1.13.1 --notes-file "artifacts\release-notes-1.13.1.md"
+gh release upload v1.19.0 "artifacts\Clippings-1.19.0-win-x64-framework-dependent.zip" "artifacts\Clippings-1.19.0-win-arm64-framework-dependent.zip"
+gh release edit v1.19.0 --notes-file "artifacts\release-notes-1.19.0.md"
 ```
 
 `release-notes` 檔案可從 `RELEASE_NOTES.md` 的最新區段擷取，或使用 `--notes` 直接輸入。

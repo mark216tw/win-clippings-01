@@ -98,6 +98,7 @@ public partial class EditorWindow : Window
         try
         {
             InitializeComponent();
+            WindowSizingHelper.ClampToWorkArea(this);
             DiscardButton.Visibility = _canDiscard ? Visibility.Visible : Visibility.Collapsed;
             CloseButton.Visibility = _canDiscard ? Visibility.Collapsed : Visibility.Visible;
 
@@ -200,6 +201,30 @@ public partial class EditorWindow : Window
             (float)((CanvasElement.ActualWidth - Bitmap.Width * _zoom) / 2),
             (float)((CanvasElement.ActualHeight - Bitmap.Height * _zoom) / 2));
         _fitted = true;
+        UpdateZoomText();
+        UpdateOverlayLayout();
+        CanvasElement.InvalidateVisual();
+    }
+
+    private void ZoomFromKeyboard(float factor)
+    {
+        if (CanvasElement.ActualWidth <= 1 || CanvasElement.ActualHeight <= 1)
+        {
+            return;
+        }
+
+        var center = new Point(CanvasElement.ActualWidth / 2, CanvasElement.ActualHeight / 2);
+        var imagePoint = ClampToImage(ToImage(center));
+        var newZoom = Math.Clamp(_zoom * factor, 0.05f, 8f);
+        if (Math.Abs(newZoom - _zoom) < 0.0001f)
+        {
+            return;
+        }
+
+        _zoom = newZoom;
+        _offset = new SKPoint(
+            (float)(center.X - imagePoint.X * _zoom),
+            (float)(center.Y - imagePoint.Y * _zoom));
         UpdateZoomText();
         UpdateOverlayLayout();
         CanvasElement.InvalidateVisual();
@@ -1666,6 +1691,27 @@ public partial class EditorWindow : Window
         if (Keyboard.Modifiers == (ModifierKeys.Control | ModifierKeys.Shift) && e.Key == Key.S)
         {
             _ = SaveToFileAsync();
+            e.Handled = true;
+            return;
+        }
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && e.Key is Key.OemPlus or Key.Add)
+        {
+            ZoomFromKeyboard(1.25f);
+            e.Handled = true;
+            return;
+        }
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && e.Key is Key.OemMinus or Key.Subtract)
+        {
+            ZoomFromKeyboard(1 / 1.25f);
+            e.Handled = true;
+            return;
+        }
+
+        if ((Keyboard.Modifiers & ModifierKeys.Control) != 0 && e.Key is Key.D0 or Key.NumPad0)
+        {
+            FitCanvas(force: true);
             e.Handled = true;
             return;
         }

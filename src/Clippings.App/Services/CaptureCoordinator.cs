@@ -31,6 +31,7 @@ public enum CaptureInvocationSource
 public sealed class CaptureCoordinator
 {
     private readonly ScreenCaptureService _capture;
+    private readonly WindowsGraphicsCaptureService _windowsGraphicsCapture;
     private readonly MonitorService _monitors;
     private readonly ForegroundWindowTracker _foregroundWindows;
     private readonly IClippingsStore _store;
@@ -42,6 +43,7 @@ public sealed class CaptureCoordinator
 
     public CaptureCoordinator(
         ScreenCaptureService capture,
+        WindowsGraphicsCaptureService windowsGraphicsCapture,
         MonitorService monitors,
         ForegroundWindowTracker foregroundWindows,
         IClippingsStore store,
@@ -51,6 +53,7 @@ public sealed class CaptureCoordinator
         ILoggerFactory loggerFactory)
     {
         _capture = capture;
+        _windowsGraphicsCapture = windowsGraphicsCapture;
         _monitors = monitors;
         _foregroundWindows = foregroundWindows;
         _store = store;
@@ -79,6 +82,7 @@ public sealed class CaptureCoordinator
         var mainWindow = MainWindow;
         var annotations = AnnotationService;
         var restoreMainWindow = mainWindow?.IsVisible == true;
+        var needsScreenSettleDelay = restoreMainWindow || annotations?.IsActive == true;
         WindowCaptureTarget? windowTarget = null;
         SKBitmap? screen = null;
         try
@@ -93,9 +97,16 @@ public sealed class CaptureCoordinator
                 windowTarget = target;
             }
 
-            mainWindow?.Hide();
+            if (restoreMainWindow)
+            {
+                mainWindow!.Hide();
+            }
+
             annotations?.PrepareForCapture();
-            await Task.Delay(180);
+            if (needsScreenSettleDelay)
+            {
+                await Task.Delay(180);
+            }
 
             if (mode == CaptureMode.Delayed)
             {
@@ -111,13 +122,12 @@ public sealed class CaptureCoordinator
 
             if (mode == CaptureMode.Window)
             {
-                if (windowTarget is not { } target ||
-                    !WindowHelper.TryGetVisibleWindowBounds(target, out var windowBounds))
+                if (windowTarget is not { } target || !NativeMethods.IsWindow(target.Handle))
                 {
                     throw new InvalidOperationException("目前視窗已關閉、最小化或無法擷取。");
                 }
 
-                var image = await Task.Run(() => _capture.CaptureScreenRegion(windowBounds, monitors));
+                var image = await CaptureWindowAsync(target, monitors);
                 await HandleCaptureAsync(image, OverlayAction.Copy, CaptureMode.Window, source);
                 restoreMainWindow = false;
                 return;
@@ -207,6 +217,35 @@ public sealed class CaptureCoordinator
     public Task CaptureWindowAsync(
         CaptureInvocationSource source = CaptureInvocationSource.UserInterface)
         => CaptureAsync(CaptureMode.Window, source);
+
+    private async Task<SKBitmap> CaptureWindowAsync(
+        WindowCaptureTarget target,
+        IReadOnlyList<MonitorInfo> monitors)
+    {
+        if (_windowsGraphicsCapture.IsSupported)
+        {
+            try
+            {
+                var image = await _windowsGraphicsCapture.CaptureWindowAsync(target.Handle);
+                _logger.LogInformation(
+                    "使用 Windows.Graphics.Capture 完成視窗擷取：{Width}x{Height}",
+                    image.Width,
+                    image.Height);
+                return image;
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                _logger.LogWarning(exception, "進階視窗擷取失敗，改用桌面可見畫面擷取。");
+            }
+        }
+
+        if (!WindowHelper.TryGetVisibleWindowBounds(target, out var windowBounds))
+        {
+            throw new InvalidOperationException("目前視窗已關閉、最小化或無法擷取。");
+        }
+
+        return await Task.Run(() => _capture.CaptureScreenRegion(windowBounds, monitors));
+    }
 
     private PixelRect GetCurrentMonitorBounds(PixelRect virtualBounds, IReadOnlyList<MonitorInfo> monitors)
     {
@@ -341,6 +380,14 @@ public sealed class CaptureCoordinator
                 TryPlayCaptureSound();
             }
 
+            if (action == OverlayAction.Copy || settings.AutoCopy)
+            {
+                if (!await CopyToClipboardAsync(image))
+                {
+                    _notifications.Show(AppStrings.ClipboardCopyFailed, isError: true);
+                }
+            }
+
             var (png, thumbnailBytes, hash) = await Task.Run(() =>
             {
                 var encoded = ImageCodec.Encode(image, ImageFormat.Png);
@@ -367,14 +414,6 @@ public sealed class CaptureCoordinator
             {
                 _logger.LogError(exception, "寫入 Clippings 歷史庫失敗。");
                 _notifications.Show(AppStrings.CaptureHistorySaveFailed, isError: true);
-            }
-
-            if (action == OverlayAction.Copy || settings.AutoCopy)
-            {
-                if (!await CopyToClipboardAsync(image))
-                {
-                    _notifications.Show(AppStrings.ClipboardCopyFailed, isError: true);
-                }
             }
 
             if (action == OverlayAction.Save)

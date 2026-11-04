@@ -16,6 +16,7 @@ public static class NativeMethods
     public const uint ModNoRepeat = 0x4000;
 
     public const uint WdaNone = 0x00000000;
+    public const uint WdaMonitor = 0x00000001;
     public const uint WdaExcludeFromCapture = 0x00000011;
 
     public const int SrcCopy = 0x00CC0020;
@@ -46,12 +47,15 @@ public static class NativeMethods
     public const int SwpNoZOrder = 0x0004;
     public const int SwpNoActivate = 0x0010;
     public const int SwpShowWindow = 0x0040;
+    public const int SwRestore = 9;
 
     public static readonly IntPtr HwndTopmost = new(-1);
 
     public const int GwlExStyle = -20;
     public const long WsExTransparent = 0x00000020L;
+    public const long WsExToolWindow = 0x00000080L;
     public const long WsExLayered = 0x00080000L;
+    public const long WsExNoActivate = 0x08000000L;
 
     [StructLayout(LayoutKind.Sequential)]
     public struct Rect
@@ -109,6 +113,8 @@ public static class NativeMethods
 
     public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref Rect monitorRect, IntPtr data);
 
+    public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr data);
+
     public delegate void WinEventProc(
         IntPtr hook,
         uint eventType,
@@ -121,6 +127,16 @@ public static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clipRect, MonitorEnumProc callback, IntPtr data);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool EnumWindows(EnumWindowsProc callback, IntPtr data);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int maxCount);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern int GetWindowTextLength(IntPtr hWnd);
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
@@ -189,6 +205,14 @@ public static class NativeMethods
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindowAsync(IntPtr hWnd, int command);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetAncestor(IntPtr hWnd, uint flags);

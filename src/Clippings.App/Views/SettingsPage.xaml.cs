@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -5,6 +7,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using Clippings.App.Services;
 using Clippings.App.Strings;
+using Clippings.Core.Helpers;
 using Clippings.Core.Input;
 using Clippings.Core.Models;
 using Clippings.Core.Services;
@@ -25,6 +28,14 @@ public partial class SettingsPage : UserControl
         new(AppTheme.DuskBlue, AppStrings.ThemeDuskBlue),
         new(AppTheme.DuskPurple, AppStrings.ThemeDuskPurple),
         new(AppTheme.InkGreenNight, AppStrings.ThemeInkGreenNight),
+    ];
+
+    private static readonly BitrateOption[] RecordingBitrateOptions =
+    [
+        new(4_000_000, "4 Mbps"),
+        new(8_000_000, "8 Mbps"),
+        new(12_000_000, "12 Mbps"),
+        new(20_000_000, "20 Mbps"),
     ];
 
     private readonly AppState _state;
@@ -52,6 +63,9 @@ public partial class SettingsPage : UserControl
         ThemeCombo.SelectedValuePath = nameof(ThemeOption.Value);
         FormatCombo.ItemsSource = new[] { "PNG", "JPEG" };
         AnnotateBackdropCombo.ItemsSource = new[] { "跟隨畫面", "白板", "黑板" };
+        RecordingFrameRateCombo.ItemsSource = new[] { 30, 60 };
+        RecordingDelayCombo.ItemsSource = new[] { 0, 5, 10, 20, 30 };
+        RecordingBitrateCombo.ItemsSource = RecordingBitrateOptions;
 
         LibraryPathText.Text = store.DataRoot;
 
@@ -86,6 +100,18 @@ public partial class SettingsPage : UserControl
             MagnifierCheck.IsChecked = settings.ShowMagnifier;
             AnnotateClickThroughCheck.IsChecked = settings.Annotation.ClickThrough;
             AnnotateBackdropCombo.SelectedIndex = (int)settings.Annotation.Backdrop;
+            RecordingDirBox.Text = settings.Recording.OutputDirectory;
+            RecordingFrameRateCombo.SelectedItem = settings.Recording.FrameRate is 30 or 60
+                ? settings.Recording.FrameRate
+                : 30;
+            RecordingBitrateCombo.SelectedValue = settings.Recording.Bitrate is 4_000_000 or 8_000_000 or 12_000_000 or 20_000_000
+                ? settings.Recording.Bitrate
+                : 8_000_000;
+            RecordingCursorCheck.IsChecked = settings.Recording.IncludeCursor;
+            RecordingSystemAudioCheck.IsChecked = settings.Recording.IncludeSystemAudio;
+            RecordingDelayCombo.SelectedItem = settings.Recording.DelaySeconds is 0 or 5 or 10 or 20 or 30
+                ? settings.Recording.DelaySeconds
+                : 0;
 
             SaveDirBox.Text = settings.SaveDirectory;
             SaveAutomaticallyCheck.IsChecked = settings.SaveAutomatically;
@@ -267,7 +293,75 @@ public partial class SettingsPage : UserControl
         }
     }
 
+    private void OnBrowseRecordingDirectoryClick(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog
+        {
+            Title = "選擇錄影輸出資料夾",
+            Multiselect = false,
+        };
+
+        if (!string.IsNullOrWhiteSpace(RecordingDirBox.Text) && Directory.Exists(RecordingDirBox.Text))
+        {
+            dialog.InitialDirectory = RecordingDirBox.Text;
+        }
+
+        if (dialog.ShowDialog(Window.GetWindow(this)) == true)
+        {
+            RecordingDirBox.Text = dialog.FolderName;
+        }
+    }
+
     private void OnSaveClick(object sender, RoutedEventArgs e) => _ = TrySaveSettings();
+
+    private void OnPagePreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (IsHotkeyBox(Keyboard.FocusedElement))
+        {
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.S)
+        {
+            e.Handled = true;
+            _ = TrySaveSettings();
+        }
+    }
+
+    private void OnOpenDataFolderClick(object sender, RoutedEventArgs e)
+        => OpenFolder(_store.DataRoot);
+
+    private void OnOpenRecordingFolderClick(object sender, RoutedEventArgs e)
+        => OpenFolder(ResolveFolder(RecordingDirBox.Text, PathUtil.DefaultRecordingRoot));
+
+    private void OnOpenSaveFolderClick(object sender, RoutedEventArgs e)
+        => OpenFolder(ResolveFolder(SaveDirBox.Text, PathUtil.DefaultSaveRoot));
+
+    private static string ResolveFolder(string? configured, string fallback)
+    {
+        var path = string.IsNullOrWhiteSpace(configured) ? fallback : configured.Trim();
+        try
+        {
+            return Path.GetFullPath(path);
+        }
+        catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+        {
+            return path;
+        }
+    }
+
+    private void OpenFolder(string path)
+    {
+        try
+        {
+            Directory.CreateDirectory(path);
+            Process.Start(new ProcessStartInfo(path) { UseShellExecute = true });
+        }
+        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException or ArgumentException or NotSupportedException or InvalidOperationException or Win32Exception)
+        {
+            SetMessage($"無法開啟資料夾：{exception.Message}", isError: true);
+        }
+    }
 
     private bool TrySaveSettings()
     {
@@ -318,6 +412,22 @@ public partial class SettingsPage : UserControl
             return false;
         }
 
+        var recordingDirectory = RecordingDirBox.Text.Trim();
+        if (!string.IsNullOrEmpty(recordingDirectory))
+        {
+            try
+            {
+                recordingDirectory = Path.GetFullPath(recordingDirectory);
+            }
+            catch (Exception exception) when (exception is ArgumentException or NotSupportedException or PathTooLongException)
+            {
+                SetMessage("錄影輸出資料夾格式不正確。", isError: true);
+                RecordingDirBox.Focus();
+                RecordingDirBox.SelectAll();
+                return false;
+            }
+        }
+
         var settings = _state.Settings.Clone();
         settings.HotkeyRegion = region.DisplayName;
         settings.HotkeyFullScreen = fullScreen.DisplayName;
@@ -342,6 +452,12 @@ public partial class SettingsPage : UserControl
         settings.Annotation.Backdrop = AnnotateBackdropCombo.SelectedIndex is >= 0 and <= 2
             ? (AnnotationBackdrop)AnnotateBackdropCombo.SelectedIndex
             : AnnotationBackdrop.Screen;
+        settings.Recording.OutputDirectory = recordingDirectory;
+        settings.Recording.FrameRate = RecordingFrameRateCombo.SelectedItem is int frameRate ? frameRate : 30;
+        settings.Recording.Bitrate = RecordingBitrateCombo.SelectedValue is int bitrate ? bitrate : 8_000_000;
+        settings.Recording.IncludeCursor = RecordingCursorCheck.IsChecked == true;
+        settings.Recording.IncludeSystemAudio = RecordingSystemAudioCheck.IsChecked == true;
+        settings.Recording.DelaySeconds = RecordingDelayCombo.SelectedItem is int recordingDelay ? recordingDelay : 0;
 
         _isLoading = true;
         RegionHotkeyBox.Text = region.DisplayName;
@@ -414,7 +530,13 @@ public partial class SettingsPage : UserControl
         AnnotateClickThroughCheck.IsChecked == true,
         AnnotateBackdropCombo.SelectedIndex is >= 0 and <= 2
             ? (AnnotationBackdrop)AnnotateBackdropCombo.SelectedIndex
-            : AnnotationBackdrop.Screen);
+            : AnnotationBackdrop.Screen,
+        (RecordingDirBox.Text ?? string.Empty).Trim(),
+        RecordingFrameRateCombo.SelectedItem is int frameRate ? frameRate : 30,
+        RecordingBitrateCombo.SelectedValue is int bitrate ? bitrate : 8_000_000,
+        RecordingCursorCheck.IsChecked == true,
+        RecordingSystemAudioCheck.IsChecked == true,
+        RecordingDelayCombo.SelectedItem is int recordingDelay ? recordingDelay : 0);
 
     private static string NormalizeHotkey(string text)
         => HotkeyGesture.TryParse(text, out var gesture) && gesture is not null
@@ -478,8 +600,16 @@ public partial class SettingsPage : UserControl
         AppTheme Theme,
         bool StartWithWindows,
         bool AnnotateClickThrough,
-        AnnotationBackdrop AnnotateBackdrop);
+        AnnotationBackdrop AnnotateBackdrop,
+        string RecordingDirectory,
+        int RecordingFrameRate,
+        int RecordingBitrate,
+        bool RecordingIncludeCursor,
+        bool RecordingIncludeSystemAudio,
+        int RecordingDelaySeconds);
 
     private sealed record ThemeOption(AppTheme Value, string DisplayName);
+
+    private sealed record BitrateOption(int Value, string DisplayName);
 }
 

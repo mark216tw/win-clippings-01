@@ -31,6 +31,7 @@ public sealed class ClipboardWatcher : IDisposable
     private readonly AppState _state;
     private readonly ILogger<ClipboardWatcher> _logger;
     private readonly DispatcherTimer _debounce;
+    private readonly object _hashGate = new();
     private HwndSource? _source;
     private bool _listening;
     private string? _lastHash;
@@ -86,7 +87,13 @@ public sealed class ClipboardWatcher : IDisposable
         }
     }
 
-    public void ResetLastHash() => _lastHash = null;
+    public void ResetLastHash()
+    {
+        lock (_hashGate)
+        {
+            _lastHash = null;
+        }
+    }
 
     private IntPtr WindowProcedure(IntPtr hwnd, int message, IntPtr wParam, IntPtr lParam, ref bool handled)
     {
@@ -126,9 +133,23 @@ public sealed class ClipboardWatcher : IDisposable
         try
         {
             using var bitmap = BitmapSourceHelper.ToSKBitmap(image);
+            var hash = HashUtil.Sha256Hex(bitmap.GetPixelSpan());
+            lock (_hashGate)
+            {
+                if (string.Equals(_lastHash, hash, StringComparison.Ordinal))
+                {
+                    return;
+                }
+            }
+
             var png = ImageCodec.Encode(bitmap, ImageFormat.Png);
             var thumbnail = ImageCodec.EncodeThumbnailJpeg(bitmap);
-            Emit(new ClipboardSnapshot(png, thumbnail, HashUtil.Sha256Hex(png)));
+            lock (_hashGate)
+            {
+                _lastHash = hash;
+            }
+
+            Emit(new ClipboardSnapshot(png, thumbnail, hash));
         }
         catch (Exception exception)
         {
@@ -138,12 +159,6 @@ public sealed class ClipboardWatcher : IDisposable
 
     private void Emit(ClipboardSnapshot snapshot)
     {
-        if (string.Equals(_lastHash, snapshot.Hash, StringComparison.Ordinal))
-        {
-            return;
-        }
-
-        _lastHash = snapshot.Hash;
         var dispatcher = Application.Current?.Dispatcher;
         if (dispatcher is null)
         {

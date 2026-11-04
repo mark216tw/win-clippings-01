@@ -11,7 +11,7 @@ public sealed class TrayNotificationService : INotificationService
 
     public void Initialize(TaskbarIcon? trayIcon) => _trayIcon = trayIcon;
 
-    public void Show(string message, bool isError = false)
+    public void Show(string message, bool isError = false, bool playSound = true)
     {
         if (_trayIcon is null)
         {
@@ -29,7 +29,8 @@ public sealed class TrayNotificationService : INotificationService
             trayIcon.ShowNotification(
                 AppStrings.AppName,
                 message,
-                isError ? NotificationIcon.Error : NotificationIcon.Info);
+                isError ? NotificationIcon.Error : NotificationIcon.Info,
+                sound: playSound);
         }
 
         var dispatcher = Application.Current?.Dispatcher;

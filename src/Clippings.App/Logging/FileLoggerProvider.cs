@@ -8,6 +8,8 @@ namespace Clippings.App.Logging;
 public sealed class FileLoggerProvider : ILoggerProvider
 {
     private const int RetentionDays = 7;
+    private const int ChannelCapacity = 2048;
+    private const int MaxBatchSize = 64;
 
     private readonly string _directory;
     private readonly Channel<LogEntry> _channel;
@@ -20,11 +22,12 @@ public sealed class FileLoggerProvider : ILoggerProvider
         Directory.CreateDirectory(_directory);
         CleanupOldLogs();
 
-        _channel = Channel.CreateUnbounded<LogEntry>(
-            new UnboundedChannelOptions
+        _channel = Channel.CreateBounded<LogEntry>(
+            new BoundedChannelOptions(ChannelCapacity)
             {
                 SingleReader = true,
                 SingleWriter = false,
+                FullMode = BoundedChannelFullMode.DropOldest,
             });
         _writerTask = Task.Run(WriteLoopAsync);
     }
@@ -56,39 +59,91 @@ public sealed class FileLoggerProvider : ILoggerProvider
             return;
         }
 
-        _channel.Writer.TryWrite(new LogEntry(category, level, message, exception));
+        _channel.Writer.TryWrite(new LogEntry(DateTimeOffset.Now, category, level, message, exception));
     }
 
     private async Task WriteLoopAsync()
     {
-        await foreach (var entry in _channel.Reader.ReadAllAsync().ConfigureAwait(false))
+        StreamWriter? writer = null;
+        DateOnly? writerDate = null;
+
+        void ResetWriter()
         {
-            var builder = new StringBuilder();
-            builder.Append(DateTimeOffset.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"))
-                .Append(" [")
-                .Append(entry.Level)
-                .Append("] ")
-                .Append(entry.Category)
-                .Append(": ")
-                .Append(entry.Message)
-                .AppendLine();
+            writer?.Dispose();
+            writer = null;
+            writerDate = null;
+        }
 
-            if (entry.Exception is not null)
+        try
+        {
+            while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false))
             {
-                builder.AppendLine(entry.Exception.ToString());
-            }
+                var builder = new StringBuilder();
+                var count = 0;
+                while (count < MaxBatchSize && _channel.Reader.TryRead(out var entry))
+                {
+                    AppendEntry(builder, entry);
+                    count++;
+                }
 
-            try
-            {
-                var path = Path.Combine(_directory, $"app-{DateTimeOffset.Now:yyyyMMdd}.log");
-                await File.AppendAllTextAsync(path, builder.ToString()).ConfigureAwait(false);
+                if (count == 0)
+                {
+                    continue;
+                }
+
+                var today = DateOnly.FromDateTime(DateTimeOffset.Now.LocalDateTime);
+                try
+                {
+                    var activeWriter = writer;
+                    if (activeWriter is null || writerDate != today)
+                    {
+                        ResetWriter();
+                        var path = Path.Combine(_directory, $"app-{today:yyyyMMdd}.log");
+                        var stream = new FileStream(
+                            path,
+                            FileMode.Append,
+                            FileAccess.Write,
+                            FileShare.ReadWrite,
+                            4096,
+                            FileOptions.Asynchronous);
+                        activeWriter = new StreamWriter(stream);
+                        writer = activeWriter;
+                        writerDate = today;
+                    }
+
+                    await activeWriter.WriteAsync(builder.ToString()).ConfigureAwait(false);
+                    await activeWriter.FlushAsync().ConfigureAwait(false);
+                }
+                catch (IOException)
+                {
+                    ResetWriter();
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    ResetWriter();
+                }
             }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
+        }
+        finally
+        {
+            ResetWriter();
+        }
+    }
+
+    private static void AppendEntry(StringBuilder builder, LogEntry entry)
+    {
+        builder.Append(entry.Timestamp.ToString("yyyy-MM-dd HH:mm:ss.fff"))
+            .Append(" [")
+            .Append(entry.Level)
+            .Append("] ")
+            .Append(entry.Category)
+            .Append(": ")
+            .Append(entry.Message)
+            .AppendLine();
+
+        if (entry.Exception is not null)
+        {
+            builder.AppendLine(entry.Exception.ToString());
         }
     }
 
@@ -123,6 +178,7 @@ public sealed class FileLoggerProvider : ILoggerProvider
     }
 
     private readonly record struct LogEntry(
+        DateTimeOffset Timestamp,
         string Category,
         LogLevel Level,
         string Message,

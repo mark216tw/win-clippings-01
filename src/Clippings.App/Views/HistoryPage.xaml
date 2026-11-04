@@ -79,9 +79,11 @@
             <ListBox x:Name="ItemsList"
                      ItemContainerStyle="{StaticResource CardListItemStyle}"
                      MouseDoubleClick="OnItemDoubleClick"
+                     KeyDown="OnItemsKeyDown"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Auto"
-                     ScrollViewer.CanContentScroll="False">
+                     ScrollViewer.CanContentScroll="False"
+                     ScrollViewer.ScrollChanged="OnItemsScrollChanged">
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <WrapPanel />
@@ -90,6 +92,19 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <Border Style="{StaticResource CardBorderStyle}" Width="250" Margin="0,0,12,12" Padding="10">
+                            <Border.ContextMenu>
+                                <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                    <MenuItem Header="複製圖片" Click="OnCopyClick" />
+                                    <MenuItem Header="編輯" Click="OnEditClick" />
+                                    <MenuItem Header="另存新檔" Click="OnSaveClick" />
+                                    <Separator />
+                                    <MenuItem Header="在檔案總管中顯示" Click="OnRevealClick" />
+                                    <MenuItem Header="複製檔案路徑" Click="OnCopyPathClick" />
+                                    <Separator />
+                                    <MenuItem Header="收藏／取消收藏" Click="OnFavoriteClick" />
+                                    <MenuItem Header="刪除" Click="OnDeleteClick" />
+                                </ContextMenu>
+                            </Border.ContextMenu>
                             <StackPanel>
                                 <Border CornerRadius="8" Height="140" ClipToBounds="True" Background="{DynamicResource SurfaceAltBrush}">
                                     <Image Source="{Binding ThumbnailPath, Converter={StaticResource PathToImage}, ConverterParameter=250}"
@@ -107,10 +122,11 @@
                                                    Margin="0,2,0,0" />
                                     </StackPanel>
 
-                                    <Button HorizontalAlignment="Right"
-                                            VerticalAlignment="Top"
-                                            Click="OnFavoriteClick"
-                                            ToolTip="收藏／取消收藏">
+                                     <Button HorizontalAlignment="Right"
+                                             VerticalAlignment="Top"
+                                             Click="OnFavoriteClick"
+                                             ToolTip="收藏／取消收藏"
+                                             AutomationProperties.Name="收藏或取消收藏">
                                         <Button.Style>
                                             <Style TargetType="Button" BasedOn="{StaticResource IconButtonStyle}">
                                                 <Setter Property="Content" Value="☆" />
@@ -126,10 +142,26 @@
                                 </Grid>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                    <Button Content="複製" Style="{StaticResource IconButtonStyle}" Click="OnCopyClick" />
-                                    <Button Content="編輯" Style="{StaticResource IconButtonStyle}" Click="OnEditClick" />
-                                    <Button Content="儲存" Style="{StaticResource IconButtonStyle}" Click="OnSaveClick" />
-                                    <Button Content="刪除" Style="{StaticResource IconButtonStyle}" Click="OnDeleteClick" />
+                                    <Button Content="複製"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="OnCopyClick"
+                                            ToolTip="複製圖片到剪貼簿"
+                                            AutomationProperties.Name="複製圖片" />
+                                    <Button Content="編輯"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="OnEditClick"
+                                            ToolTip="在編輯器中開啟"
+                                            AutomationProperties.Name="編輯圖片" />
+                                    <Button Content="儲存"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="OnSaveClick"
+                                            ToolTip="另存新檔"
+                                            AutomationProperties.Name="另存圖片" />
+                                    <Button Content="刪除"
+                                            Style="{StaticResource IconButtonStyle}"
+                                            Click="OnDeleteClick"
+                                            ToolTip="刪除這張擷取"
+                                            AutomationProperties.Name="刪除擷取" />
                                 </StackPanel>
                             </StackPanel>
                         </Border>

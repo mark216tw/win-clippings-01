@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -16,12 +17,17 @@ namespace Clippings.App.Views;
 
 public partial class HistoryPage : UserControl
 {
+    private const int PageSize = 60;
+
     private readonly IClippingsStore _store;
     private readonly AppState _state;
     private readonly ILogger<HistoryPage> _logger;
     private readonly ILoggerFactory _loggerFactory;
     private readonly DispatcherTimer _searchTimer;
     private readonly SemaphoreSlim _reloadLock = new(1, 1);
+    private readonly ObservableCollection<CaptureItem> _visibleItems = [];
+    private IReadOnlyList<CaptureItem> _loadedItems = [];
+    private int _loadedCount;
 
     public HistoryPage(IClippingsStore store, AppState state, ILogger<HistoryPage> logger, ILoggerFactory loggerFactory)
     {
@@ -31,6 +37,7 @@ public partial class HistoryPage : UserControl
         _state = state;
         _logger = logger;
         _loggerFactory = loggerFactory;
+        ItemsList.ItemsSource = _visibleItems;
 
         _searchTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(320) };
         _searchTimer.Tick += (_, _) =>
@@ -53,7 +60,11 @@ public partial class HistoryPage : UserControl
                 FavoriteFilter.IsChecked == true,
                 Math.Max(50, _state.Settings.MaxCaptureItems));
 
-            ItemsList.ItemsSource = items;
+            _loadedItems = items;
+            _loadedCount = 0;
+            _visibleItems.Clear();
+            AppendNextPage();
+
             CountText.Text = $"{items.Count} 張";
             var libraryEmpty = items.Count == 0 &&
                 string.IsNullOrWhiteSpace(SearchBox.Text) &&
@@ -77,6 +88,30 @@ public partial class HistoryPage : UserControl
             LoadingState.Visibility = Visibility.Collapsed;
             _reloadLock.Release();
         }
+    }
+
+    private void AppendNextPage()
+    {
+        var next = Math.Min(_loadedItems.Count, _loadedCount + PageSize);
+        for (; _loadedCount < next; _loadedCount++)
+        {
+            _visibleItems.Add(_loadedItems[_loadedCount]);
+        }
+    }
+
+    private void OnItemsScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (_loadedCount >= _loadedItems.Count || e.ViewportHeight <= 0 || e.ExtentHeight <= 0)
+        {
+            return;
+        }
+
+        if (e.ExtentHeight - e.VerticalOffset - e.ViewportHeight > 320)
+        {
+            return;
+        }
+
+        AppendNextPage();
     }
 
     private static CaptureItem? GetItem(object sender)
@@ -129,11 +164,14 @@ public partial class HistoryPage : UserControl
 
     private async void OnCopyClick(object sender, RoutedEventArgs e)
     {
-        if (GetItem(sender) is not { } item)
+        if (GetItem(sender) is { } item)
         {
-            return;
+            await CopyItemAsync(item);
         }
+    }
 
+    private async Task CopyItemAsync(CaptureItem item)
+    {
         try
         {
             var source = await Task.Run(() =>
@@ -150,6 +188,60 @@ public partial class HistoryPage : UserControl
         {
             _logger.LogError(exception, "複製擷取影像失敗。");
             StatusText.Text = "複製失敗：" + exception.Message;
+        }
+    }
+
+    private void OnRevealClick(object sender, RoutedEventArgs e)
+    {
+        if (GetItem(sender) is not { } item)
+        {
+            return;
+        }
+
+        StatusText.Text = FileActionHelper.TryRevealInExplorer(item.FilePath, out var error)
+            ? AppStrings.RevealedInExplorer
+            : error ?? AppStrings.FileMissing;
+    }
+
+    private void OnCopyPathClick(object sender, RoutedEventArgs e)
+    {
+        if (GetItem(sender) is not { } item)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(item.FilePath) || !File.Exists(item.FilePath))
+        {
+            StatusText.Text = AppStrings.FileMissing;
+            return;
+        }
+
+        StatusText.Text = FileActionHelper.TryCopyText(item.FilePath)
+            ? AppStrings.FilePathCopied
+            : AppStrings.FilePathCopyFailed;
+    }
+
+    private async void OnItemsKeyDown(object sender, KeyEventArgs e)
+    {
+        if (ItemsList.SelectedItem is not CaptureItem item)
+        {
+            return;
+        }
+
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+        {
+            e.Handled = true;
+            await CopyItemAsync(item);
+        }
+        else if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            await OpenEditorAsync(item);
+        }
+        else if (e.Key == Key.Delete)
+        {
+            e.Handled = true;
+            await DeleteItemAsync(item);
         }
     }
 
@@ -187,11 +279,14 @@ public partial class HistoryPage : UserControl
 
     private async void OnSaveClick(object sender, RoutedEventArgs e)
     {
-        if (GetItem(sender) is not { } item)
+        if (GetItem(sender) is { } item)
         {
-            return;
+            await SaveItemAsync(item);
         }
+    }
 
+    private async Task SaveItemAsync(CaptureItem item)
+    {
         var dialog = new SaveFileDialog
         {
             Filter = "PNG 影像 (*.png)|*.png|JPEG 影像 (*.jpg;*.jpeg)|*.jpg;*.jpeg",
@@ -234,11 +329,14 @@ public partial class HistoryPage : UserControl
 
     private async void OnDeleteClick(object sender, RoutedEventArgs e)
     {
-        if (GetItem(sender) is not { } item)
+        if (GetItem(sender) is { } item)
         {
-            return;
+            await DeleteItemAsync(item);
         }
+    }
 
+    private async Task DeleteItemAsync(CaptureItem item)
+    {
         var owner = Window.GetWindow(this);
         var result = MessageBox.Show(
             owner,
@@ -298,11 +396,14 @@ public partial class HistoryPage : UserControl
 
     private async void OnFavoriteClick(object sender, RoutedEventArgs e)
     {
-        if (GetItem(sender) is not { } item)
+        if (GetItem(sender) is { } item)
         {
-            return;
+            await ToggleFavoriteAsync(item);
         }
+    }
 
+    private async Task ToggleFavoriteAsync(CaptureItem item)
+    {
         try
         {
             await _store.SetCaptureFavoriteAsync(item.Id, !item.IsFavorite);

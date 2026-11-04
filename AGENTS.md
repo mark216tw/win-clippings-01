@@ -152,5 +152,5 @@ docs/DEV_LOG.md                # 開發過程紀錄（必要）
 - **UI 框架例外**：本專案依使用者決定採用 WPF（`net10.0-windows10.0.19041.0` + `UseWPF`），不採 WinUI 3；其餘規範仍適用。WPF 不支援 `.resw`，使用者可見文字集中於 `src/Clippings.App/Strings/AppStrings.cs`，待後續改為 `.resx` 多語系。
 - 影像處理使用 SkiaSharp；`Microsoft.Graphics.Win2D` 無 WPF 控制項裝載，不要引入。
 - 特殊需求：免安裝 self-contained 發佈；資料存 `%LOCALAPPDATA%\Clippings`；系統匣常駐、單一實例、全域熱鍵。
-- 已知限制：視窗擷取、滾動長截圖、螢幕錄影、跨螢幕框選未實作；混合 DPI 多螢幕尚未實測；詳見 `README.md`。
+- 已知限制：滾動長截圖、跨螢幕框選未實作；錄影第一版僅支援單一視窗無聲 MP4；混合 DPI 多螢幕尚未實測；詳見 `README.md`。
 

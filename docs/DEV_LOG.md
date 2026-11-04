@@ -4,6 +4,346 @@
 
 ---
 
+## 2026-11-04 - v1.20.2
+
+### 目標
+
+修正錄影期間畫面可能停止但聲音繼續的問題，並讓使用者在選窗前得知尺寸限制、可從錄影控制列快速找回目標視窗。
+
+### 變更
+
+- `RecordingTargetDialog.xaml`、`AppStrings.cs`：新增錄影開始後改變視窗大小會自動停止的提醒。
+- `WindowsGraphicsRecordingService.cs`：WGC frame 持有上限設為 frame pool 容量減一；壓力過高時丟棄待處理 frame，保留 pool 可繼續接收畫面。
+- `WindowsGraphicsRecordingService.cs`：影音 sample request 使用獨立 gate 排序，長等待每 500 ms 回報進度；視訊 PTS 改依 frame index／FPS 計算。
+- `WindowsGraphicsRecordingService.cs`：異常結束時只立即釋放零引用 frame；仍由編碼器使用的 frame 等待 `Processed` callback 後安全回收。
+- `RecordingOverlayWindow.xaml(.cs)`：只有點擊目標視窗名稱時才執行還原與置前，控制按鈕不受影響。
+- `WindowHelper.cs`、`NativeMethods.cs`：置前前重新驗證 HWND／Process ID，並以 `ShowWindowAsync(SW_RESTORE)` 還原最小化視窗。
+- 文件與版本更新至 1.20.2。
+
+### 問題與解法
+
+- 原管線會讓每個送入編碼器的 sample 持有 WGC frame，若多個 `Processed` callback 延後，5 格 frame pool 可能全部被占用。改為最多持有 4 格，讓 WGC 始終有空間產生新 frame。
+- 原視訊 PTS 使用 sample request 當下的錄影時間，延遲時可能跳躍並與固定 duration 不一致；改為固定 frame index 時間軸，錄影時鐘只負責 pacing。
+- 靜態視窗本來就可能不產生新 frame，因此不能用 frame 到達逾時判定凍結；改從資源持有上限處理根因。
+- x64 與 ARM64 Debug 均為 0 警告建置成功，96 項測試及格式檢查通過。
+
+### 待辦
+
+- 需以 30／60 FPS、系統音訊開／關及高 GPU 負載進行 10 分鐘以上實機錄影，並用 `ffprobe` 檢查影音 PTS 與時長。
+- Windows 仍可能依前景視窗規則拒絕置前；失敗不會中斷錄影。
+
+### 日期與版本
+
+2026-11-04，v1.20.2。
+
+---
+
+## 2026-11-04 - v1.20.1
+
+### 目標
+
+改善錄影目標選擇與入口順序，並避免開始錄影通知音被系統音訊一併錄下。
+
+### 變更
+
+- `RecordingTargetDialog.xaml`：將內容區標題上移 8 DIP。
+- `NativeMethods`、`WindowHelper`、`RecordingCoordinator`：確認目標後以 `SetForegroundWindow` 嘗試將視窗帶到最前方；失敗時記錄警告但不中斷錄影。
+- `INotificationService`、`TrayNotificationService`：新增通知聲音開關；「已開始錄影」保留畫面通知但不播放聲音。
+- `MainWindow.xaml`、`App.xaml.cs`：主視窗與系統匣皆將「全螢幕錄影」移到「選擇視窗錄影」之前。
+- 版本提升至 1.20.1。
+
+### 問題與解法
+
+- 錄影開始通知原本在 WASAPI loopback 啟動後播放，因此通知音會進入影片；改用 H.NotifyIcon 的 `sound: false`，不需延遲錄影開始。
+- Windows 可能依前景視窗規則拒絕 `SetForegroundWindow`，因此置前採 best-effort，不讓焦點限制造成錄影失敗。
+- 驗證期間執行中的 Clippings 鎖住標準 Debug 輸出，改用獨立暫存輸出路徑執行完整建置。
+- x64 與 ARM64 Debug 隔離輸出皆為 0 警告建置成功，96 項測試及 `dotnet format --verify-no-changes` 通過。
+
+### 待辦
+
+- 需手動確認不同應用程式的前景視窗限制，以及開始通知在 Windows 10／11 上皆保持靜音。
+
+### 日期與版本
+
+2026-11-04，v1.20.1。
+
+---
+
+## 2026-11-04 - v1.20.0
+
+### 目標
+
+讓視窗與全螢幕錄影可選擇包含電腦播放的聲音，同時維持既有暫停、時間軸與 MP4 完檔行為。
+
+### 變更
+
+- `RecordingOptions`、`RecordingSettings`、`SettingsPage`：新增預設關閉的系統音訊選項。
+- `SystemAudioLoopbackCapture`：使用 NAudio WASAPI loopback 擷取預設播放裝置，轉換為 48 kHz、雙聲道、16-bit PCM。
+- `WindowsGraphicsRecordingService`：加入 PCM audio stream 與 192 kbps AAC 輸出，以 20 ms 封包和影片共用錄影時間軸。
+- `RecordingControl`：新增暫停世代編號；音訊管線在暫停期間丟棄資料，恢復時清空舊緩衝。
+- 測試與文件：補上設定預設值、暫停世代測試、使用指南與隱私說明；版本提升至 1.20.0。
+
+### 問題與解法
+
+- 執行中的 Clippings 鎖住 Debug 輸出 DLL，先以獨立暫存輸出確認完整方案可編譯，關閉程式後再執行標準建置。
+- 播放裝置格式可能是 44.1／48／96 kHz 或浮點、多聲道，透過 NAudio Media Foundation resampler 統一為媒體來源的固定 PCM 格式。
+- 方案未定義 `Debug|arm64` 組態，ARM64 改以 `Clippings.App.csproj -p:Platform=arm64` 驗證；x64、ARM64 Debug 均為 0 警告建置成功，96 項測試與格式檢查通過。
+
+### 待辦
+
+- 尚需在實際播放音訊下檢查 MP4 的 AAC stream、長時間影音漂移及播放裝置中途拔除行為。
+- DRM、獨占模式、遠端桌面與特殊音效驅動可能無法提供 loopback 音訊。
+
+### 日期與版本
+
+2026-11-04，v1.20.0。
+
+---
+
+## 2026-11-03 - v1.19.0
+
+### 目標
+
+改善日常介面操作與可及性，讓清單、框選、編輯器、設定頁與系統匣都能用更少的步驟完成常用動作。
+
+### 變更
+
+- `HistoryPage`：新增 `Enter` 編輯、`Ctrl+C` 複製、`Delete` 刪除；卡片加入右鍵選單。
+- `ClipboardPage`：新增「只看釘選」、雙擊／`Enter` 複製、`Ctrl+C`、`Delete`、`P` 釘選與卡片右鍵選單。
+- `HistoryPage`、`ClipboardPage`：右鍵選單支援在檔案總管中顯示與複製檔案路徑；卡片按鈕補上 ToolTip／AutomationProperties。
+- `MainWindow`：快速擷取按鈕的 ToolTip 顯示目前快捷鍵。
+- `SettingsPage`：新增 `Ctrl+S`、錄影／存檔／歷史庫資料夾的「開啟」按鈕。
+- `EditorWindow`：新增 `Ctrl++`／`Ctrl+-` 縮放與 `Ctrl+0` 符合視窗。
+- `CaptureOverlayWindow`：`Shift` 拖曳固定正方形，選取後可用方向鍵微調。
+- `App`：系統匣新增「啟用剪貼簿歷史」與「開啟 Clippings 資料夾」。
+- `WindowSizingHelper`：主視窗與編輯器依 `SystemParameters.WorkArea` 調整初始尺寸。
+- 文件：更新 `USER_GUIDE`、`TECHNICAL`、`CHANGELOG`、`RELEASE_NOTES`；版本提升至 1.19.0。
+
+### 問題與解法
+
+- 歷史頁使用 `WrapPanel` 無法真正虛擬化，因此維持增量載入；本次只補上鍵盤與右鍵操作。
+- 右鍵選單的 `DataContext` 不會自動從卡片繼承，改用 `PlacementTarget.DataContext` 綁定。
+- 設定頁的 `Ctrl+S` 會先排除快捷鍵輸入框，避免錄製 `Ctrl+S` 時被儲存動作攔截。
+
+### 待辦
+
+- 尚未手動驗證多螢幕 DPI 下的視窗尺寸調整與框選方向鍵微調。
+- 尚未實測右鍵選單在深色主題與鍵盤操作下的焦點行為。
+
+### 日期與版本
+
+2026-11-03，v1.19.0。
+
+---
+
+## 2026-11-03 - v1.18.1
+
+### 目標
+
+執行第一波低風險、高效益的效能與穩定性優化，重點放在擷取等待路徑、日誌／資料庫寫入，以及大量歷史項目的 UI 負擔。
+
+### 變更
+
+- `CaptureCoordinator.cs`：只有主視窗可見或螢幕標註進行中時才隱藏並等待畫面穩定；主視窗未顯示時直接擷取。
+- `CaptureCoordinator.cs`：擷取完成後先複製到剪貼簿，再編碼 PNG、寫入歷史與執行保留策略。
+- `App.xaml.cs`：新增 `Microsoft.EntityFrameworkCore.Database.Command` 的 `Warning` 過濾，避免每個查詢都寫入檔案日誌。
+- `FileLoggerProvider.cs`：改用容量 2048 的有界 Channel（`DropOldest`），以批次方式透過單一 `StreamWriter` 寫入並定時 flush。
+- `ClipboardWatcher.cs`：先對原始像素計算 SHA-256，重複內容直接略過，不再重複編碼 PNG／縮圖；雜湊狀態加上鎖定。
+- `ClippingsStore.cs`、`SqlitePragmaInterceptor.cs`：連線字串加入 `Pooling=True`，連線開啟時套用 `synchronous=NORMAL`、`temp_store=MEMORY`、`cache_size=-8192`。
+- `HistoryPage.xaml(.cs)`：改為每頁 60 筆的增量載入，避免一次建立全部卡片。
+- `ClipboardPage.xaml`：`CanContentScroll` 改為 `True`，讓預設 `VirtualizingStackPanel` 正常虛擬化。
+- `PathToImageConverter.cs`：以檔案路徑、解碼寬度與 `LastWriteTimeUtc` 做縮圖快取，避免切頁時重複解碼。
+- 版本提升至 1.18.1。
+
+### 問題與解法
+
+- `HistoryPage` 使用 `WrapPanel`，即使開啟虛擬化也無法真正回收容器；因此改採增量載入，保留現有卡片排版並避免新增套件。
+- `ClipboardPage` 原本 `CanContentScroll="False"` 會讓虛擬化失效，改回 `True` 即可沿用預設虛擬化面板。
+- `synchronous=NORMAL` 在 WAL 模式下仍維持資料庫一致性，但極端斷電時可能少最後一筆交易；已記錄為可接受取捨。
+
+### 待辦
+
+- 尚未實測大量歷史（500～1000 筆）下的增量載入手感與捲動位置。
+- 尚未實測 `FileLoggerProvider` 跨日換檔與磁碟寫入失敗後的重開行為。
+- 尚未比較 SQLite PRAGMA 調整前後的實際寫入延遲。
+
+### 日期與版本
+
+2026-11-03，v1.18.1。
+
+---
+
+## 2026-11-03 - v1.18.0
+
+### 目標
+
+新增全螢幕錄影與錄影中浮動控制列，支援暫停／繼續，並修正倒數視窗取消按鈕被裁切的問題。
+
+### 變更
+
+- `Platform/Interop/RecordingTarget.cs`、`MonitorInfo`、`MonitorService`：新增視窗／螢幕共用錄影目標與 HMONITOR。
+- `WindowsGraphicsCaptureService`、`WindowsGraphicsRecordingService`：新增 `CreateForMonitor` 與 `RecordMonitorAsync`，與視窗錄影共用管線。
+- `Core/Models/RecordingControl.cs`、`RecordingState.Paused`：新增可暫停計時器與 sample request 暫停 gate。
+- `RecordingOverlayWindow.xaml(.cs)`、`RecordingOverlayService.cs`：目標螢幕右上角控制列，含紅色指示、時間、名稱、暫停／繼續／停止。
+- `RecordingCoordinator.cs`：整合視窗／全螢幕目標、暫停／繼續、控制列生命週期與主視窗隱藏／還原。
+- 主視窗與系統匣新增「全螢幕錄影」，錄影卡片與設定頁改為「螢幕錄影」。
+- `RecordingCountdownWindow` 改為 `SizeToContent` 並在版面完成後定位。
+- 測試與文件：新增 `RecordingControl` 測試與 `Paused` 列舉穩定值；版本提升至 1.18.0。
+
+### 問題與解法
+
+- `PixelRect` 沒有 `Top` 屬性，控制列定位改用 `Y`。
+- 控制列 `SizeToContent` 後寬度會隨狀態文字變動，加入 `SizeChanged` 重新定位。
+- 暫停時若直接停止，等待中的 sample request 可能卡住 EOS；`SignalEndOfStream` 會呼叫 `ReleaseWaiters()`。
+- 以暫存 console 實測全螢幕錄影：1.5 秒錄影、暫停 2 秒、再錄 1.5 秒，`ffprobe` 顯示 H.264、1920×1080、30 FPS、2.5333 秒，確認暫停時間已排除。
+
+### 待辦
+
+- 尚未手動驗證長時間暫停（建議 30～60 秒）是否會觸發 MediaStreamSource 逾時。
+- 尚未實測混合 DPI、多螢幕下的控制列定位與全螢幕錄影。
+- 音訊、區域錄影與影片編輯尚未實作。
+
+### 日期與版本
+
+2026-11-03，v1.18.0。
+
+---
+
+## 2026-11-03 - v1.17.0
+
+### 目標
+
+讓每次錄影都能明確選擇目標視窗，並提供不計入影片時間的延遲倒數，避免切換視窗與編碼器準備時間被錄入。
+
+### 變更
+
+- `Platform/Interop/WindowEnumerationService.cs`、`App/Views/RecordingTargetDialog.xaml(.cs)`：列出目前可見、未最小化且可擷取的外部視窗，支援重新整理、雙擊與鍵盤確認。
+- `Core/Models/RecordingOptions.cs`、`SettingsPage.xaml(.cs)`：新增可持久化的 0／5／10／20／30 秒錄影開始延遲。
+- `RecordingCountdownWindow.xaml(.cs)`、`RecordingCountdownService.cs`：新增置中於目標、不搶焦點且排除擷取的浮動倒數，可直接取消。
+- `WindowsGraphicsRecordingService.cs`：Transcoder 準備完成後才執行倒數，完成並重新驗證目標後才啟動 capture session。
+- `RecordingCoordinator.cs`、主視窗與系統匣：共用選窗流程，新增 `Countdown` 狀態、剩餘秒數及取消控制；錄影計時從實際開始擷取後才啟動。
+- 測試與文件：補上延遲預設值、深層複製與列舉穩定值測試；版本提升至 1.17.0。
+
+### 問題與解法
+
+- 系統匣初次接線仍引用舊錄影 API，建置出現 CS1061；改為新的共用選窗入口與 `CanStartRecording` 狀態。
+- 為避免編碼器初始化時間縮短使用者設定的延遲，倒數回呼放在 `PrepareMediaStreamSourceTranscodeAsync` 完成後、`StartCapture()` 前。
+- 同時執行 WPF 建置與 `dotnet format` 會競爭 `obj` 中的 BAML 暫存檔並產生 BG1002；改為依序驗證後建置成功。
+
+### 待辦
+
+- 尚未手動驗證混合 DPI、多螢幕下的倒數置中與實際 WGC 錄影；自動建置與 91 項測試已通過。
+- 音訊、暫停、螢幕／區域錄影與動態尺寸縮放尚未實作。
+
+### 日期與版本
+
+2026-11-03，v1.17.0。
+
+---
+
+## 2026-11-03 - v1.16.0
+
+### 目標
+
+讓第一版視窗錄影可從主視窗直接操作、提供常用品質與輸出設定，並補上磁碟空間、暫存檔與完成檔案操作等實際使用所需的穩定性保護。
+
+### 變更
+
+- `Core/Models/RecordingOptions.cs`、`AppSettings.cs`：新增可持久化的 `RecordingSettings`（輸出資料夾、30／60 FPS、4／8／12／20 Mbps、游標）並深層複製。
+- `Platform/Capture/WindowsGraphicsRecordingService.cs`：套用幀率、位元率與游標設定；錄影中每 5 秒檢查磁碟空間，低於 64 MB 時停止。
+- `Platform/Storage/JsonSettingsStore.cs`：載入時修復為 `null` 的 `Annotation`／`Recording` 子設定。
+- `App/Services/RecordingCoordinator.cs`：讀取設定快照、開始前檢查 256 MB、清除殘留暫存檔、記錄開始時間與上次輸出，提供開啟影片／資料夾。
+- `App/Views/MainWindow.xaml(.cs)`：新增錄影卡片、準備／錄影／完檔狀態、每秒計時與完成檔案操作。
+- `App/Views/SettingsPage.xaml(.cs)`：新增錄影設定卡片並納入未儲存變更 snapshot。
+- `App/App.xaml.cs`：系統匣新增開啟上次錄影／資料夾，錄影期間更新 ToolTip。
+- 測試與文件：新增錄影設定預設值與深層複製測試，更新 README、使用指南、架構、技術、系統設計、隱私、變更紀錄與版本說明；版本提升至 1.16.0。
+
+### 問題與解法
+
+- 執行中的 Clippings 鎖住 Debug 輸出 DLL，標準 `dotnet build` 無法覆寫；驗證改用 `-p:OutputPath` 指向核准 Temp 路徑，不中斷正在執行的使用者實例。
+- 直接共用 `BaseIntermediateOutputPath` 會讓多專案產生同名 AssemblyInfo 而重複；改為只覆寫 App build 的 `OutputPath`，保留各專案原本 obj 隔離。
+- 60 FPS／12 Mbps／不含游標 smoke test 以 `ffprobe` 驗證：H.264、982×740、60 FPS、179 frames、2.983317 秒。
+
+### 待辦
+
+- 尚未完成視窗改變尺寸時的 GPU scaling／letterbox；目前仍會自動停止。
+- 尚未實測 30 分鐘、4K、ARM64、多 GPU、HDR、遠端桌面與 Windows N。
+- 音訊、暫停、螢幕／區域錄影與影片編輯尚未實作。
+
+### 日期與版本
+
+2026-11-03，v1.16.0。
+
+---
+
+## 2026-11-03 - v1.15.0
+
+### 目標
+
+完成第一版目前視窗錄影：從系統匣開始／停止，使用 Windows.Graphics.Capture 持續取得 frame，輸出可正常完檔的無聲 H.264 MP4，並確保靜態畫面、編碼落後與程式結束時不造成時長錯誤或損壞檔案。
+
+### 變更
+
+- `Core/Models/RecordingOptions.cs`：新增錄影選項、狀態、停止原因與結果模型；錄影與圖片 `CaptureMode` 分離。
+- `Core/Helpers/PathUtil.cs`：新增預設 `影片\Clippings` 路徑與錄影檔名。
+- `Platform/Capture/WindowsGraphicsRecordingService.cs`：新增 WGC 5-buffer frame pool、容量 1 latest-frame slot、Direct3D surface 引用計數、MediaStreamSource、MediaTranscoder、H.264 MP4、EOS 完檔與暫存檔搬移。
+- `Platform/Capture/WindowsGraphicsCaptureService.cs`：共用 D3D／GraphicsCaptureItem 建立流程，並修正 `IDXGIDevice` IID。
+- `App/Services/RecordingCoordinator.cs`：管理 `Idle／Starting／Recording／Stopping`、目標視窗、輸出路徑、停止、通知與錯誤。
+- `App/App.xaml.cs`：系統匣新增開始／停止錄影，依狀態動態切換；程式結束時最多等待 15 秒完成錄影。
+- `App/Strings/AppStrings.cs`：新增錄影操作與通知文字。
+- `tests/Clippings.Core.Tests/AppSettingsTests.cs`：新增錄影檔名與狀態列舉穩定性測試。
+- 文件與版本：更新 README、使用指南、架構、技術、系統設計、隱私、變更紀錄與版本說明；版本提升至 1.15.0。
+
+### 問題與解法
+
+- `IDXGIDevice` IID 原字串少一段十六進位數字，建置成功但執行期 `Guid` 初始化拋出 `FormatException`，導致 v1.14.0 WGC 一律退回 GDI；改為正確 IID `54EC77FA-1377-44E6-8C32-88FD5F44C84C`。
+- 靜態視窗不會持續觸發 WGC `FrameArrived`，最初輸出只有一個 frame／0.033 秒；改為保留目前 GPU surface 並按單調時鐘重複提交樣本。
+- 以 `MediaStreamSample.Processed` 作為單一 semaphore 會與編碼器下一個 SampleRequested 循環等待；改用 frame 引用計數，允許同一 surface 有多個在途樣本，取代且引用歸零後才釋放。
+- 測試計時器若在 MediaTranscoder 初始化前啟動，會把準備時間算入錄影；新增 `recordingStarted` 回呼，成功 StartCapture 後才切換狀態與通知。
+- smoke test 以 `ffprobe` 驗證 3 秒靜態視窗：H.264、982×740、30 FPS、90 frames、3.000000 秒，MP4 可正常解析。
+
+### 待辦
+
+- 尚未實測長時間、4K、ARM64、多 GPU、HDR、遠端桌面、Windows N 與磁碟空間不足。
+- 第一版只有單一視窗無聲錄影；不支援螢幕／區域、系統音訊、麥克風、暫停、動態縮放或影片編輯。
+- 目標視窗改變尺寸時會自動停止，尚未加入固定畫布縮放或 letterbox。
+
+### 日期與版本
+
+2026-11-03，v1.15.0。
+
+---
+
+## 2026-11-03 - v1.14.0
+
+### 目標
+
+為後續螢幕錄影先驗證 Windows.Graphics.Capture 管線，並直接改善目前視窗被其他視窗遮擋時的擷取結果，同時維持 Windows 10 1809 相容性。
+
+### 變更
+
+- `Platform/Capture/WindowsGraphicsCaptureService.cs`：新增 HWND 建立 `GraphicsCaptureItem`、Direct3D 11 BGRA 裝置、free-threaded frame pool、首幀 `SoftwareBitmap` 複製與 5 秒逾時。
+- `App/Services/CaptureCoordinator.cs`：目前視窗在 Windows 10 1903 以上優先使用 Windows.Graphics.Capture；不支援、初始化失敗、逾時或 GPU 擷取失敗時記錄警告並退回既有 GDI 可見畫面擷取。
+- `App/App.xaml.cs`：將新擷取服務註冊至 DI。
+- 文件與版本：同步更新使用指南、技術與架構文件、變更紀錄及版本說明；版本提升至 1.14.0。
+
+### 問題與解法
+
+- 專案最低版本是 Windows 10 1809，但從 HWND 建立擷取項目需要 Windows 10 1903；以 OS build 與 `GraphicsCaptureSession.IsSupported()` 雙重能力檢查處理，不提高最低版本。
+- WGC 需要 Direct3D 11 與 CsWinRT COM interop；目前目標框架已提供 Windows SDK 投影，不需新增 NuGet 套件。
+- 平台擷取可能因 GPU、遠端桌面或受保護內容失敗；保留 GDI fallback，避免既有功能退步。
+
+### 待辦
+
+- 尚未在實體 Windows 10 1903、Windows 11、ARM64、混合 DPI、多 GPU 與遠端桌面環境手動驗證。
+- Windows.Graphics.Capture 目前只取單張視窗首幀，尚未延伸到螢幕錄影、音訊或持續 frame pipeline。
+
+### 日期與版本
+
+2026-11-03，v1.14.0。
+
+---
+
 ## 2026-11-03 - v1.13.1
 
 ### 目標

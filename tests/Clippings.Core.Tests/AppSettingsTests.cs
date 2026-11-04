@@ -77,6 +77,40 @@ public class AppSettingsTests
     }
 
     [Fact]
+    public void Clone_DeepCopiesRecordingSettings()
+    {
+        var settings = new AppSettings();
+        var clone = settings.Clone();
+
+        clone.Recording.OutputDirectory = @"D:\Recordings";
+        clone.Recording.FrameRate = 60;
+        clone.Recording.Bitrate = 20_000_000;
+        clone.Recording.IncludeCursor = false;
+        clone.Recording.IncludeSystemAudio = true;
+        clone.Recording.DelaySeconds = 20;
+
+        Assert.Equal(string.Empty, settings.Recording.OutputDirectory);
+        Assert.Equal(30, settings.Recording.FrameRate);
+        Assert.Equal(8_000_000, settings.Recording.Bitrate);
+        Assert.True(settings.Recording.IncludeCursor);
+        Assert.False(settings.Recording.IncludeSystemAudio);
+        Assert.Equal(0, settings.Recording.DelaySeconds);
+    }
+
+    [Fact]
+    public void RecordingSettings_HaveDefaults()
+    {
+        var recording = new AppSettings().Recording;
+
+        Assert.Equal(string.Empty, recording.OutputDirectory);
+        Assert.Equal(30, recording.FrameRate);
+        Assert.Equal(8_000_000, recording.Bitrate);
+        Assert.True(recording.IncludeCursor);
+        Assert.False(recording.IncludeSystemAudio);
+        Assert.Equal(0, recording.DelaySeconds);
+    }
+
+    [Fact]
     public void AnnotationTool_ExistingValuesRemainStable()
     {
         Assert.Equal(0, (int)AnnotationTool.Arrow);
@@ -154,5 +188,25 @@ public class AppSettingsTests
         var name = PathUtil.BuildImageFileName(new DateTimeOffset(2026, 10, 31, 9, 5, 1, TimeSpan.Zero), "abcdef1234567890", "png");
 
         Assert.Equal("Clippings_20261031_090501_abcdef12.png", name);
+    }
+
+    [Fact]
+    public void BuildRecordingFileName_UsesTimestamp()
+    {
+        var name = PathUtil.BuildRecordingFileName(
+            new DateTimeOffset(2026, 11, 3, 14, 6, 9, TimeSpan.Zero));
+
+        Assert.Equal("Clippings_20261103_140609.mp4", name);
+    }
+
+    [Fact]
+    public void RecordingState_ValuesRemainStable()
+    {
+        Assert.Equal(0, (int)RecordingState.Idle);
+        Assert.Equal(1, (int)RecordingState.Starting);
+        Assert.Equal(2, (int)RecordingState.Recording);
+        Assert.Equal(3, (int)RecordingState.Stopping);
+        Assert.Equal(4, (int)RecordingState.Countdown);
+        Assert.Equal(5, (int)RecordingState.Paused);
     }
 }

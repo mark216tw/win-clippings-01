@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 using Clippings.App.Helpers;
 using Clippings.App.Services;
 using Clippings.App.Strings;
@@ -35,10 +36,13 @@ public partial class ClipboardPage : UserControl
                 null,
                 ClipboardItemKind.Image,
                 Math.Max(50, _state.Settings.MaxClipboardItems));
-            ItemsList.ItemsSource = items;
-            CountText.Text = $"{items.Count} 筆";
+            var visibleItems = PinnedFilter.IsChecked == true
+                ? items.Where(item => item.IsPinned).ToList()
+                : items.ToList();
+            ItemsList.ItemsSource = visibleItems;
+            CountText.Text = $"{visibleItems.Count} 筆";
             EmptyState.Text = AppStrings.EmptyClipboardImages;
-            EmptyState.Visibility = items.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
+            EmptyState.Visibility = visibleItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
             ClearButton.Visibility = items.Count == 0 ? Visibility.Collapsed : Visibility.Visible;
         }
         catch (Exception exception)
@@ -57,13 +61,55 @@ public partial class ClipboardPage : UserControl
 
     private void OnRefreshClick(object sender, RoutedEventArgs e) => _ = ReloadAsync();
 
+    private void OnFilterChanged(object sender, RoutedEventArgs e) => _ = ReloadAsync();
+
     private async void OnCopyClick(object sender, RoutedEventArgs e)
     {
-        if (GetItem(sender) is not { } item)
+        if (GetItem(sender) is { } item)
+        {
+            await CopyItemAsync(item);
+        }
+    }
+
+    private async void OnItemDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ItemsList.SelectedItem is ClipboardItem item)
+        {
+            await CopyItemAsync(item);
+        }
+    }
+
+    private async void OnItemsKeyDown(object sender, KeyEventArgs e)
+    {
+        if (ItemsList.SelectedItem is not ClipboardItem item)
         {
             return;
         }
 
+        if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+        {
+            e.Handled = true;
+            await CopyItemAsync(item);
+        }
+        else if (e.Key == Key.Enter)
+        {
+            e.Handled = true;
+            await CopyItemAsync(item);
+        }
+        else if (e.Key == Key.Delete)
+        {
+            e.Handled = true;
+            await DeleteItemAsync(item);
+        }
+        else if (Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.P)
+        {
+            e.Handled = true;
+            await TogglePinAsync(item);
+        }
+    }
+
+    private async Task CopyItemAsync(ClipboardItem item)
+    {
         if (string.IsNullOrWhiteSpace(item.FilePath) || !File.Exists(item.FilePath))
         {
             StatusText.Text = AppStrings.CopyImageMissingFile;
@@ -87,6 +133,36 @@ public partial class ClipboardPage : UserControl
             _logger.LogError(exception, "複製剪貼簿項目失敗。");
             StatusText.Text = "複製失敗：" + exception.Message;
         }
+    }
+
+    private void OnRevealClick(object sender, RoutedEventArgs e)
+    {
+        if (GetItem(sender) is not { } item)
+        {
+            return;
+        }
+
+        StatusText.Text = FileActionHelper.TryRevealInExplorer(item.FilePath, out var error)
+            ? AppStrings.RevealedInExplorer
+            : error ?? AppStrings.FileMissing;
+    }
+
+    private void OnCopyPathClick(object sender, RoutedEventArgs e)
+    {
+        if (GetItem(sender) is not { } item)
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(item.FilePath) || !File.Exists(item.FilePath))
+        {
+            StatusText.Text = AppStrings.FileMissing;
+            return;
+        }
+
+        StatusText.Text = FileActionHelper.TryCopyText(item.FilePath)
+            ? AppStrings.FilePathCopied
+            : AppStrings.FilePathCopyFailed;
     }
 
     private async void OnAddToCaptureClick(object sender, RoutedEventArgs e)
@@ -135,11 +211,14 @@ public partial class ClipboardPage : UserControl
 
     private async void OnPinClick(object sender, RoutedEventArgs e)
     {
-        if (GetItem(sender) is not { } item)
+        if (GetItem(sender) is { } item)
         {
-            return;
+            await TogglePinAsync(item);
         }
+    }
 
+    private async Task TogglePinAsync(ClipboardItem item)
+    {
         try
         {
             await _store.SetClipboardPinnedAsync(item.Id, !item.IsPinned);
@@ -154,11 +233,14 @@ public partial class ClipboardPage : UserControl
 
     private async void OnDeleteClick(object sender, RoutedEventArgs e)
     {
-        if (GetItem(sender) is not { } item)
+        if (GetItem(sender) is { } item)
         {
-            return;
+            await DeleteItemAsync(item);
         }
+    }
 
+    private async Task DeleteItemAsync(ClipboardItem item)
+    {
         var owner = Window.GetWindow(this);
         var result = MessageBox.Show(
             owner,

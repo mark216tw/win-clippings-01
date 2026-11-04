@@ -121,9 +121,33 @@ tests/
 - 任意矩形（會先與虛擬桌面範圍交集）。
 - 視窗可見邊界。
 
-限制：GDI 擷取的是桌面可見畫面，受 DRM、獨佔全螢幕、遮擋與硬體加速影響。
+`WindowsGraphicsCaptureService` 提供目前視窗的優先擷取來源：
 
-### 4.2 螢幕與 DPI
+1. Windows 10 1903（build 18362）以上且 `GraphicsCaptureSession.IsSupported()` 才啟用。
+2. 以 `IGraphicsCaptureItemInterop.CreateForWindow` 從 HWND 建立擷取目標。
+3. 建立支援 BGRA 的 Direct3D 11 裝置與 free-threaded frame pool，取得第一個 BGRA8 frame。
+4. 透過 `SoftwareBitmap` 複製像素到 `SKBitmap`，等待 frame 最多 5 秒。
+5. 初始化、GPU、逾時或目標失效時由 `CaptureCoordinator` 記錄警告並退回 GDI 可見畫面擷取。
+
+限制：GDI 擷取的是桌面可見畫面；Windows.Graphics.Capture 仍可能受 DRM、獨佔全螢幕、最小化視窗、GPU／遠端環境影響。
+
+### 4.2 螢幕錄影
+
+`WindowsGraphicsRecordingService` 使用 Windows.Graphics.Capture 與 Windows Media：
+
+1. `WindowEnumerationService` 列出目前可見且可擷取的外部視窗；全螢幕錄影使用 `MonitorService` 取得游標所在螢幕的 HMONITOR。
+2. 視窗使用 `CreateForWindow`、全螢幕使用 `CreateForMonitor` 建立固定尺寸的 `GraphicsCaptureItem` 與 5-buffer free-threaded frame pool。
+3. 以容量 1 的 latest-frame slot 丟棄尚未送出的舊 frame；程式最多保留 4 個 WGC capture frame，永遠替 5-buffer frame pool 保留一格，避免編碼器延後 `Processed` callback 時讓 WGC 停止更新。
+4. `MediaStreamSource` 將 BGRA8 `IDirect3DSurface` 直接交給 `MediaTranscoder`；啟用系統音訊時，NAudio 以 WASAPI loopback 擷取預設播放裝置，轉為 48 kHz、雙聲道、16-bit PCM 後送入第二條 media stream。輸出為 H.264 MP4，音訊編為 192 kbps AAC。
+5. Transcoder 準備完成後執行可選的 0／5／10／20／30 秒浮動倒數；倒數結束並重新驗證 HWND／Process ID 或 HMONITOR 後才呼叫 `StartCapture()`，因此倒數與準備時間不計入影片。
+6. 靜態視窗不會持續產生 WGC frame，因此保留目前 surface 並重複送樣本；每個 frame 以引用計數保留到所有 `MediaStreamSample.Processed` 回呼完成。視訊 PTS 由 frame index 與 FPS 計算，錄影時鐘只控制送樣本時機。
+7. 錄影中控制列由 `RecordingOverlayWindow` 顯示在目標螢幕右上角，使用 `SetWindowDisplayAffinity` 排除擷取，並以 `WS_EX_NOACTIVATE` 避免搶焦點。
+8. 音訊與視訊 sample request 各自由獨立 gate 排序；等待 frame、排程時間或暫停 gate 超過 500 ms 時呼叫 `ReportSampleProgress`。暫停期間 loopback 資料會被丟棄，繼續後清空舊音訊並從原時間軸接續；停止或 EOS 會釋放等待中的請求。
+9. 正常停止向 `MediaStreamSource` 回傳 EOS 並等待 `TranscodeAsync` 完成，確保 MP4 metadata 寫入；成功後才將 `.recording.tmp` 搬移為 `.mp4`。
+10. 目標關閉或尺寸改變會自動停止；目前不做縮放、letterbox 或分段錄影。
+11. 開始前檢查至少 256 MB 可用空間；錄影中每 5 秒檢查，低於 64 MB 以錯誤 EOS 停止。啟動時清除預設與目前設定資料夾內殘留的 `.recording.tmp`。
+
+### 4.3 螢幕與 DPI
 
 `MonitorService` 透過 `EnumDisplayMonitors` 與 `GetMonitorInfo` 取得：
 
@@ -133,13 +157,13 @@ tests/
 
 螢幕依 `X`、`Y` 排序，方便建立覆蓋層與選擇目前螢幕。
 
-### 4.3 前景視窗
+### 4.4 前景視窗
 
 - `ForegroundWindowTracker` 註冊 `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`，並忽略本行程事件。
 - 觸發視窗擷取時優先取得目前前景視窗；若失敗則回退到最近記住的可見視窗。
 - `WindowHelper` 使用 DWM 擴充框與可見性檢查，排除最小化、隱藏或被遮擋的目標。
 
-### 4.4 影像處理
+### 4.5 影像處理
 
 `ImageCodec`：
 
@@ -150,17 +174,18 @@ tests/
 - `EncodeThumbnailJpeg`：最長邊 320 px、JPEG 品質 82，白色背景平整化。
 - `CreateThumbnail`：線性取樣縮圖。
 
-### 4.5 資料儲存
+### 4.6 資料儲存
 
 `ClippingsStore` 使用 EF Core 與 SQLite：
 
 - 資料庫路徑：`%LOCALAPPDATA%\Clippings\clippings.db`。
 - 啟動時 `EnsureCreated()`，並啟用 `PRAGMA journal_mode=WAL`。
+- 連線啟用 `Pooling=True`，每次開啟時套用 `synchronous=NORMAL`、`temp_store=MEMORY`、`cache_size=-8192`。
 - 圖檔與縮圖先寫入磁碟，再寫入資料庫；刪除資料列時嘗試刪除對應檔案。
 - `TrimCapturesAsync`／`TrimClipboardItemsAsync` 同時處理「超過天數」與「超過數量」，收藏／釘選項目不受影響。
 - 剪貼簿以 `Hash` 唯一索引去重，重複時更新 `CreatedAt`。
 
-### 4.6 設定
+### 4.7 設定
 
 `JsonSettingsStore`：
 
@@ -168,7 +193,7 @@ tests/
 - 寫入時先寫 `.tmp` 再 `File.Move(overwrite: true)`，降低設定檔損壞風險。
 - 讀取失敗（JSON 格式、I/O、權限）時回到預設 `AppSettings`。
 
-### 4.7 開機啟動
+### 4.8 開機啟動
 
 `StartupRegistrar` 寫入目前使用者登錄：
 
@@ -179,7 +204,7 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 
 不需要系統管理員權限。
 
-### 4.8 單一實例
+### 4.9 單一實例
 
 `SingleInstanceService`：
 
@@ -189,7 +214,7 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 無效或舊版訊息會降級為空參數，由第一個實例顯示主視窗。
 - 事件 `ActivationRequested` 携带 `ActivationRequestedEventArgs.Arguments`。
 
-### 4.9 主控台輸出
+### 4.10 主控台輸出
 
 `ConsoleBridge.TryAttachToParent()` 使用 `AttachConsole(ATTACH_PARENT_PROCESS)`，讓 `WinExe` 在從終端機啟動時能輸出 `--help` 與參數錯誤；附加失敗時由 App 改用 `MessageBox`。
 
@@ -214,15 +239,23 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 負責單一擷取流程：
 
 - `_busy` 防止重入。
-- 擷取前隱藏主視窗並等待 180 ms，讓畫面穩定。
+- 只有主視窗可見或螢幕標註進行中時，才隱藏並等待 180 ms 讓畫面穩定。
 - 延遲模式先顯示倒數視窗，再轉為區域框選。
 - 區域框選會為每個螢幕建立 `CaptureOverlayWindow`，並將虛擬桌面影像裁切成各螢幕影像。
-- 完成後編碼 PNG 與縮圖、計算 SHA-256、寫入歷史、執行保留策略。
-- 依動作與設定執行複製、另存、自動存檔與開啟編輯器。
+- 目前視窗在能力可用時優先走 `WindowsGraphicsCaptureService`，失敗時退回 `ScreenCaptureService`。
+- 完成後先依動作與設定複製到剪貼簿，再編碼 PNG 與縮圖、計算 SHA-256、寫入歷史、執行保留策略。
+- 最後依動作與設定執行另存、自動存檔與開啟編輯器。
 - `CaptureInvocationSource`：`UserInterface`、`GlobalHotkey`、`CommandLine`。
 - 只有 `GlobalHotkey` 會播放提示音；只有 `GlobalHotkey` 或使用者選擇「編輯」才會自動開啟編輯器。
 
-### 5.3 全域熱鍵
+### 5.3 RecordingCoordinator
+
+- 與圖片用 `CaptureCoordinator` 分離，狀態為 `Idle`、`Starting`、`Recording`、`Stopping`。
+- 從 `ForegroundWindowTracker` 取得目標，依 `AppSettings.Recording` 建立輸出檔，同秒重複時加流水號。
+- 主視窗與系統匣依狀態切換開始／停止；主視窗以 `DispatcherTimer` 顯示經過時間，完成後可開啟影片或資料夾。
+- 停止、目標關閉、尺寸改變或程式結束都會等待 MP4 完檔；錯誤透過日誌與系統匣通知回報。
+
+### 5.4 全域熱鍵
 
 `GlobalHotkeyService`：
 
@@ -233,18 +266,18 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - `SuppressDispatch()` 可在錄製快捷鍵時暫停分派（設定頁使用）。
 - 設定變更時 `UnregisterAll()` 後重新註冊。
 
-### 5.4 剪貼簿監聽
+### 5.5 剪貼簿監聽
 
 `ClipboardWatcher`：
 
 - 建立訊息-only `HwndSource`，註冊 `AddClipboardFormatListener`。
 - 收到 `WM_CLIPBOARDUPDATE` 後以 260 ms `DispatcherTimer` 去抖。
 - 只處理圖片內容；文字與檔案清單不記錄。
-- 以 SHA-256 計算雜湊；與上一次相同時略過。
+- 先以原始像素計算 SHA-256；與上一次相同時直接略過，不進行編碼。
 - 圖片在背景執行緒編碼 PNG 與縮圖，再切回 UI 執行緒觸發 `Captured`。
 - 可透過 `SetEnabled` 動態開啟／關閉。
 
-### 5.5 編輯器
+### 5.6 編輯器
 
 `EditorWindow`：
 
@@ -262,29 +295,30 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 輸出時合成為 `SKBitmap`，再交由 `ImageCodec` 編碼；複製與另存新檔一律包含註解（複製整張與框選複製皆先合成再輸出）。「另存新檔」僅匯出圖檔，不清除變更狀態。
 - 「儲存」按鈕呼叫 `SaveToLibraryAndCloseAsync`，於背景合成後以 `UpdateCaptureImageAsync` 覆蓋原始擷取項目（原項目不在時退回 `AddCaptureAsync` 新增一筆）；成功後刷新歷史庫並關閉，失敗顯示錯誤並留在編輯器。沒有變更且原項目已存在時直接關閉，不更新時間與排序。
 - 「關閉」與視窗 X 直接關閉，不儲存編輯；新擷取的「捨棄」會先刪除該筆紀錄與圖檔再關閉。關閉事件不再自動存回。
-- 鍵盤：`Ctrl+Z`／`Ctrl+Y`／`Ctrl+C`／`Ctrl+S`（儲存）、`Ctrl+Shift+S`（另存新檔）、`Esc` 關閉或取消裁切、`Enter` 確認裁切。
+- 鍵盤：`Ctrl+Z`／`Ctrl+Y`／`Ctrl+C`／`Ctrl+S`（儲存）、`Ctrl+Shift+S`（另存新檔）、`Ctrl++`／`Ctrl+-` 縮放、`Ctrl+0` 符合視窗、`Esc` 關閉或取消裁切、`Enter` 確認裁切。
 
-### 5.6 框選覆蓋層
+### 5.7 框選覆蓋層
 
 `CaptureOverlayWindow`：
 
 - 每個螢幕一個無邊框、透明、Topmost 視窗。
-- 顯示凍結的螢幕影像，支援拖曳建立選取區、移動、八方向調整大小。
+- 顯示凍結的螢幕影像，支援拖曳建立選取區、移動、八方向調整大小；按住 `Shift` 拖曳固定正方形，方向鍵可微調選取區。
 - 放大鏡顯示座標、RGB 與目前顏色。
 - 操作列提供複製、編輯、儲存、取消。
 - 鍵盤：`Enter`／`Ctrl+C` 複製、`Ctrl+E` 編輯、`Ctrl+S` 儲存、`Esc` 取消。
 - 完成時回傳 `OverlayResult`（影像、`PixelRect`、`OverlayAction`）。
 
-### 5.7 主題與樣式
+### 5.8 主題與樣式
 
 - `ThemeService.Apply` 依 `AppTheme` 載入 `Styles/*.xaml`，插入 `Application.Resources.MergedDictionaries`。
 - `System` 會讀取 `HKCU\...\Themes\Personalize\AppsUseLightTheme`。
 - 套用主題時同步更新所有視窗的 DWM 深色標題列。
 - 共用樣式集中於 `Styles/Controls.xaml`，顏色與筆刷使用 `DynamicResource`。
 
-### 5.8 日誌與例外
+### 5.9 日誌與例外
 
-- `FileLoggerProvider` 使用 `Channel<LogEntry>` 背景寫入 `logs/app-yyyyMMdd.log`。
+- `FileLoggerProvider` 使用容量 2048 的有界 `Channel<LogEntry>`（滿載時丟棄最舊項目），以批次方式寫入 `logs/app-yyyyMMdd.log`。
+- EF Core 的 `Database.Command` 日誌過濾為 `Warning`，避免每個查詢都寫入檔案。
 - 保留 7 天，啟動時清除過期檔案。
 - UI、背景與未觀察工作例外都有全域處理常式。
 
@@ -426,8 +460,9 @@ UI、GDI 擷取與實際剪貼簿行為需在 Windows 桌面環境手動驗證�
 ## 10. 效能與限制
 
 - 全螢幕擷取會一次配置整個虛擬桌面的點陣圖；多個 4K 螢幕會佔用可觀記憶體。
-- 縮圖最長邊 320 px，降低歷史頁載入成本。
-- 剪貼簿圖片在背景編碼，避免 UI 卡頓。
+- 縮圖最長邊 320 px，並以檔案時間戳快取，降低歷史頁重複解碼成本。
+- 歷史頁每頁載入 60 筆；剪貼簿頁使用預設虛擬化清單。
+- 剪貼簿圖片先比對原始像素雜湊，重複內容不重新編碼。
 - 歷史查詢上限 5000 筆，搜尋使用 SQL `LIKE`。
 - 保留策略在每次新增後執行，刪除時同步移除檔案。
 - GDI 擷取、單螢幕框選與混合 DPI 限制如前所述。
