@@ -452,6 +452,16 @@ public partial class App : Application
 
     private void ShowMainWindow() => ShowMainWindow(0);
 
+    internal void ShowRecentCaptures()
+    {
+        if (IsExiting || _mainWindow is null)
+        {
+            return;
+        }
+
+        ShowMainWindow(0);
+    }
+
     private void ShowMainWindow(int pageIndex)
     {
         if (_mainWindow is null)

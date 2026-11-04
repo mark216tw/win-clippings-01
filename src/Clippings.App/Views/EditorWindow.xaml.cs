@@ -1846,10 +1846,11 @@ public partial class EditorWindow : Window
             return;
         }
 
+        var revealRecentCaptures = _canDiscard;
         CommitTextInput();
         if (!IsDirty && _origin is { Id: > 0 })
         {
-            Close();
+            CloseAndRevealRecentCaptures(revealRecentCaptures);
             return;
         }
 
@@ -1910,8 +1911,21 @@ public partial class EditorWindow : Window
         }
 
         SetBusy(false);
-        (Application.Current.MainWindow as MainWindow)?.NotifyCaptureStored();
+        if (!revealRecentCaptures)
+        {
+            (Application.Current.MainWindow as MainWindow)?.NotifyCaptureStored();
+        }
+
+        CloseAndRevealRecentCaptures(revealRecentCaptures);
+    }
+
+    private void CloseAndRevealRecentCaptures(bool reveal)
+    {
         Close();
+        if (reveal && Application.Current is App { IsExiting: false } app)
+        {
+            app.ShowRecentCaptures();
+        }
     }
 
     private void OnWindowClosed(object? sender, EventArgs e)

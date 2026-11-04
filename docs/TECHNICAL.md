@@ -293,7 +293,7 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 文字輸入以覆蓋的 `TextBox` 實作，`Enter` 換行、`Ctrl+Enter` 完成、`Esc` 取消。
 - 馬賽克以區塊平均色繪製，並使用快取避免重複計算。
 - 輸出時合成為 `SKBitmap`，再交由 `ImageCodec` 編碼；複製與另存新檔一律包含註解（複製整張與框選複製皆先合成再輸出）。「另存新檔」僅匯出圖檔，不清除變更狀態。
-- 「儲存」按鈕呼叫 `SaveToLibraryAndCloseAsync`，於背景合成後以 `UpdateCaptureImageAsync` 覆蓋原始擷取項目（原項目不在時退回 `AddCaptureAsync` 新增一筆）；成功後刷新歷史庫並關閉，失敗顯示錯誤並留在編輯器。沒有變更且原項目已存在時直接關閉，不更新時間與排序。
+- 「儲存」按鈕呼叫 `SaveToLibraryAndCloseAsync`，於背景合成後以 `UpdateCaptureImageAsync` 覆蓋原始擷取項目（原項目不在時退回 `AddCaptureAsync` 新增一筆）；成功後刷新歷史庫並關閉，失敗顯示錯誤並留在編輯器。沒有變更且原項目已存在時直接關閉，不更新時間與排序。若編輯器是從新擷圖開啟（`canDiscard` 為 `true`），儲存成功後會呼叫 `App.ShowRecentCaptures()` 顯示主視窗並切到最近擷取頁；從最近擷取重新編輯時則維持原本的刷新行為。
 - 「關閉」與視窗 X 直接關閉，不儲存編輯；新擷取的「捨棄」會先刪除該筆紀錄與圖檔再關閉。關閉事件不再自動存回。
 - 鍵盤：`Ctrl+Z`／`Ctrl+Y`／`Ctrl+C`／`Ctrl+S`（儲存）、`Ctrl+Shift+S`（另存新檔）、`Ctrl++`／`Ctrl+-` 縮放、`Ctrl+0` 符合視窗、`Esc` 關閉或取消裁切、`Enter` 確認裁切。
 

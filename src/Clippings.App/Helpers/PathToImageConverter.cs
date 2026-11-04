@@ -50,6 +50,7 @@ public sealed class PathToImageConverter : System.Windows.Data.IValueConverter
             var image = new BitmapImage();
             image.BeginInit();
             image.CacheOption = BitmapCacheOption.OnLoad;
+            image.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
             image.DecodePixelWidth = decodeWidth;
             image.UriSource = new Uri(path, UriKind.Absolute);
             image.EndInit();

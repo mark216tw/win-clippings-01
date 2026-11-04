@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-11-04 - v1.22.1
+
+### 目標
+
+修復編輯擷取後縮圖仍顯示編輯前圖片的回歸，並讓新擷圖在編輯器按「儲存」後自動開啟最近擷取頁。
+
+### 變更
+
+- `Helpers/PathToImageConverter.cs`：解碼 `BitmapImage` 時加回 `BitmapCreateOptions.IgnoreImageCache`，保留既有的檔案時間戳快取。
+- `App.xaml.cs`：新增 `ShowRecentCaptures()`，重用主視窗顯示、還原最小化、切頁與啟用邏輯。
+- `Views/EditorWindow.xaml.cs`：`SaveToLibraryAndCloseAsync()` 成功後，若編輯器由新擷圖開啟（`_canDiscard`），關閉編輯器並呼叫 `ShowRecentCaptures()`；從最近擷取重新編輯時維持原本刷新行為。無變更直接儲存的新擷圖也比照開啟。
+- `Directory.Build.props`：版本升至 1.22.1。
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`README.md`、`docs/USER_GUIDE.md`、`docs/TECHNICAL.md`。
+
+### 問題與解法
+
+- v1.20.2 加入縮圖快取時移除了 `IgnoreImageCache`；自建快取會依時間戳失效，但 WPF 內建的 URI 影像快取仍會回傳同檔案的舊解碼結果，造成縮圖顯示編輯前圖片、編輯器點開卻是新圖。加回 `IgnoreImageCache` 後，時間戳變更時會強制重新解碼。
+- 自動開啟最近擷取只套用新擷圖流程，避免從歷史頁重新編輯儲存時又主動彈出主視窗。
+
+### 待辦
+
+- 尚未實機驗證系統匣隱藏狀態下用熱鍵擷圖、編輯、儲存後主視窗是否正確帶到前景。
+- 尚未驗證主視窗停留在設定頁且有未儲存設定時，儲存後跳頁的確認行為。
+
+### 日期與版本
+
+2026-11-04，v1.22.1。
+
+---
+
 ## 2026-11-04 - v1.22.0
 
 ### 目標
