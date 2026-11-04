@@ -100,6 +100,31 @@ public class AppSettingsTests
     }
 
     [Fact]
+    public void EditorWindowSettings_HaveDefaults()
+    {
+        var editorWindow = new AppSettings().EditorWindow;
+
+        Assert.Equal(1180, editorWindow.Width);
+        Assert.Equal(780, editorWindow.Height);
+        Assert.False(editorWindow.Maximized);
+    }
+
+    [Fact]
+    public void Clone_DeepCopiesEditorWindowSettings()
+    {
+        var settings = new AppSettings();
+        var clone = settings.Clone();
+
+        clone.EditorWindow.Width = 1500;
+        clone.EditorWindow.Height = 1000;
+        clone.EditorWindow.Maximized = true;
+
+        Assert.Equal(1180, settings.EditorWindow.Width);
+        Assert.Equal(780, settings.EditorWindow.Height);
+        Assert.False(settings.EditorWindow.Maximized);
+    }
+
+    [Fact]
     public void RecordingSettings_HaveDefaults()
     {
         var recording = new AppSettings().Recording;

@@ -588,6 +588,11 @@ public partial class App : Application
 
     private void ExitApplication()
     {
+        foreach (var editor in Windows.OfType<EditorWindow>())
+        {
+            editor.PersistWindowPlacement();
+        }
+
         IsExiting = true;
         Shutdown();
     }

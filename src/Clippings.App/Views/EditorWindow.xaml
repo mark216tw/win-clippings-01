@@ -12,7 +12,9 @@
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource AppBackgroundBrush}"
         SourceInitialized="OnSourceInitialized"
+        Loaded="OnWindowLoaded"
         SizeChanged="OnWindowSizeChanged"
+        StateChanged="OnWindowStateChanged"
         KeyDown="OnWindowKeyDown"
         Closing="OnWindowClosing"
         Closed="OnWindowClosed">

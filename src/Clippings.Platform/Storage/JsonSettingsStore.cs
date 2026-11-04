@@ -45,6 +45,7 @@ public sealed class JsonSettingsStore : ISettingsStore
                 var settings = JsonSerializer.Deserialize<AppSettings>(json, Options) ?? new AppSettings();
                 settings.Annotation ??= new AnnotationSettings();
                 settings.Recording ??= new RecordingSettings();
+                settings.EditorWindow ??= new EditorWindowSettings();
                 return settings;
             }
             catch (JsonException)

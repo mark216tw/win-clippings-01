@@ -32,4 +32,12 @@ public sealed class AppState
         Settings.Annotation = annotation;
         _store.Save(Settings);
     }
+
+    public void RememberEditorWindow(double width, double height, bool maximized)
+    {
+        Settings.EditorWindow.Width = width;
+        Settings.EditorWindow.Height = height;
+        Settings.EditorWindow.Maximized = maximized;
+        _store.Save(Settings);
+    }
 }

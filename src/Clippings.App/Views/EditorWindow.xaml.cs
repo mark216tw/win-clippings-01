@@ -72,6 +72,8 @@ public partial class EditorWindow : Window
     private int _nextNumber = 1;
     private bool _initialized;
     private bool _disposed;
+    private bool _restoreMaximized;
+    private bool _windowPlacementRestored;
 
     public EditorWindow(SKBitmap bitmap, AppState state, IClippingsStore store, ILoggerFactory loggerFactory, CaptureItem? origin, bool canDiscard)
     {
@@ -98,7 +100,25 @@ public partial class EditorWindow : Window
         try
         {
             InitializeComponent();
+
+            var editorWindowSettings = settings.EditorWindow;
+            if (double.IsFinite(editorWindowSettings.Width) && editorWindowSettings.Width >= MinWidth)
+            {
+                Width = editorWindowSettings.Width;
+            }
+
+            if (double.IsFinite(editorWindowSettings.Height) && editorWindowSettings.Height >= MinHeight)
+            {
+                Height = editorWindowSettings.Height;
+            }
+
             WindowSizingHelper.ClampToWorkArea(this);
+            _restoreMaximized = editorWindowSettings.Maximized;
+            if (_restoreMaximized)
+            {
+                WindowState = WindowState.Maximized;
+            }
+
             DiscardButton.Visibility = _canDiscard ? Visibility.Visible : Visibility.Collapsed;
             CloseButton.Visibility = _canDiscard ? Visibility.Collapsed : Visibility.Visible;
 
@@ -161,6 +181,31 @@ public partial class EditorWindow : Window
         WindowHelper.ApplyRoundedCorners(handle);
     }
 
+    private void OnWindowLoaded(object sender, RoutedEventArgs e)
+    {
+        if (_windowPlacementRestored)
+        {
+            return;
+        }
+
+        if (_restoreMaximized)
+        {
+            WindowState = WindowState.Maximized;
+        }
+
+        _windowPlacementRestored = true;
+    }
+
+    private void OnWindowStateChanged(object? sender, EventArgs e)
+    {
+        if (!_windowPlacementRestored || WindowState == WindowState.Minimized)
+        {
+            return;
+        }
+
+        PersistWindowPlacement();
+    }
+
     private void OnWindowSizeChanged(object sender, SizeChangedEventArgs e)
     {
         if (!_initialized)
@@ -170,11 +215,28 @@ public partial class EditorWindow : Window
 
         if (!_fitted && CanvasElement.ActualWidth > 1 && CanvasElement.ActualHeight > 1)
         {
-            FitCanvas(force: true);
+            ApplyActualSize();
         }
 
         UpdateZoomText();
         UpdateOverlayLayout();
+    }
+
+    private void ApplyActualSize()
+    {
+        if (Bitmap.Width <= 0 || Bitmap.Height <= 0)
+        {
+            return;
+        }
+
+        _zoom = 1;
+        _offset = new SKPoint(
+            (float)((CanvasElement.ActualWidth - Bitmap.Width * _zoom) / 2),
+            (float)((CanvasElement.ActualHeight - Bitmap.Height * _zoom) / 2));
+        _fitted = true;
+        UpdateZoomText();
+        UpdateOverlayLayout();
+        CanvasElement.InvalidateVisual();
     }
 
     private void FitCanvas(bool force = false)
@@ -1764,6 +1826,8 @@ public partial class EditorWindow : Window
 
     private void OnWindowClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        PersistWindowPlacement();
+
         if (App.Current.IsExiting)
         {
             return;
@@ -1858,10 +1922,36 @@ public partial class EditorWindow : Window
         }
 
         _disposed = true;
+        PersistWindowPlacement();
         CancelTextInput();
         ClearMosaicCache();
         _undo.Clear();
         _image.Release();
+    }
+
+    internal void PersistWindowPlacement() => SaveWindowPlacement();
+
+    private void SaveWindowPlacement()
+    {
+        var maximized = WindowState == WindowState.Maximized;
+        var bounds = WindowState == WindowState.Normal
+            ? new Rect(Left, Top, ActualWidth, ActualHeight)
+            : RestoreBounds;
+
+        if (!double.IsFinite(bounds.Width) || !double.IsFinite(bounds.Height) ||
+            bounds.Width < MinWidth || bounds.Height < MinHeight)
+        {
+            return;
+        }
+
+        try
+        {
+            _state.RememberEditorWindow(bounds.Width, bounds.Height, maximized);
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "無法儲存編輯器視窗大小。");
+        }
     }
 
     private sealed record EditorToolOption(AnnotationTool Tool, string Name, Geometry Icon)

@@ -44,13 +44,27 @@ public sealed class AppSettings
 
     public RecordingSettings Recording { get; set; } = new();
 
+    public EditorWindowSettings EditorWindow { get; set; } = new();
+
     public AppSettings Clone()
     {
         var clone = (AppSettings)MemberwiseClone();
         clone.Annotation = Annotation.Clone();
         clone.Recording = Recording.Clone();
+        clone.EditorWindow = EditorWindow.Clone();
         return clone;
     }
+}
+
+public sealed class EditorWindowSettings
+{
+    public double Width { get; set; } = 1180;
+
+    public double Height { get; set; } = 780;
+
+    public bool Maximized { get; set; }
+
+    public EditorWindowSettings Clone() => (EditorWindowSettings)MemberwiseClone();
 }
 
 public enum AppTheme
