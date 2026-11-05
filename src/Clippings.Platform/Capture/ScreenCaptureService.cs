@@ -18,10 +18,10 @@ public sealed class ScreenCaptureService
 
     public IReadOnlyList<MonitorInfo> GetMonitors() => _monitorService.GetMonitors();
 
-    public (SKBitmap Bitmap, PixelRect Bounds) CaptureVirtualScreen()
-        => CaptureVirtualScreen(_monitorService.GetMonitors());
+    public (SKBitmap Bitmap, PixelRect Bounds) CaptureVirtualScreen(bool includeCursor = false)
+        => CaptureVirtualScreen(_monitorService.GetMonitors(), includeCursor);
 
-    public (SKBitmap Bitmap, PixelRect Bounds) CaptureVirtualScreen(IReadOnlyList<MonitorInfo> monitors)
+    public (SKBitmap Bitmap, PixelRect Bounds) CaptureVirtualScreen(IReadOnlyList<MonitorInfo> monitors, bool includeCursor = false)
     {
         ArgumentNullException.ThrowIfNull(monitors);
 
@@ -31,13 +31,14 @@ public sealed class ScreenCaptureService
             throw new InvalidOperationException("找不到可擷取的螢幕。");
         }
 
-        var bitmap = CaptureRegion(bounds);
+        var bitmap = CaptureRegion(bounds, includeCursor);
         return (bitmap, bounds);
     }
 
-    public SKBitmap CaptureMonitor(MonitorInfo monitor) => CaptureRegion(monitor.Bounds);
+    public SKBitmap CaptureMonitor(MonitorInfo monitor, bool includeCursor = false)
+        => CaptureRegion(monitor.Bounds, includeCursor);
 
-    public SKBitmap CaptureScreenRegion(PixelRect requestedBounds, IReadOnlyList<MonitorInfo> monitors)
+    public SKBitmap CaptureScreenRegion(PixelRect requestedBounds, IReadOnlyList<MonitorInfo> monitors, bool includeCursor = false)
     {
         ArgumentNullException.ThrowIfNull(monitors);
 
@@ -48,10 +49,10 @@ public sealed class ScreenCaptureService
             throw new InvalidOperationException("目前視窗不在可擷取的螢幕範圍內。");
         }
 
-        return CaptureRegion(visibleBounds);
+        return CaptureRegion(visibleBounds, includeCursor);
     }
 
-    private static SKBitmap CaptureRegion(PixelRect bounds)
+    private static SKBitmap CaptureRegion(PixelRect bounds, bool includeCursor)
     {
         var screenDc = NativeMethods.GetDC(IntPtr.Zero);
         if (screenDc == IntPtr.Zero)
@@ -113,6 +114,11 @@ public sealed class ScreenCaptureService
             if (!copied)
             {
                 throw new InvalidOperationException("螢幕擷取失敗。");
+            }
+
+            if (includeCursor)
+            {
+                CursorRenderer.TryDraw(memoryDc, bounds);
             }
 
             var info = new SKImageInfo(bounds.Width, bounds.Height, SKColorType.Bgra8888, SKAlphaType.Opaque);

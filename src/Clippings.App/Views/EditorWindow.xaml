@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:skia="clr-namespace:SkiaSharp.Views.WPF;assembly=SkiaSharp.Views.WPF"
         xmlns:strings="clr-namespace:Clippings.App.Strings"
+        xmlns:models="clr-namespace:Clippings.Core.Models;assembly=Clippings.Core"
         Title="Clippings 編輯器"
         Icon="/Assets/clippings.ico"
         Width="1180"
@@ -33,231 +34,362 @@
                 Padding="10,8">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="工具" Style="{StaticResource CaptionStyle}" Margin="0,0,6,0" VerticalAlignment="Center" />
-                    <ComboBox x:Name="ToolCombo" Width="148" SelectionChanged="OnToolSelectionChanged"
-                              Style="{StaticResource ToolSelectorStyle}"
-                              PreviewMouseLeftButtonDown="OnToolComboPreviewMouseLeftButtonDown"
-                              ToolTip="點擊工具名稱套用該工具，點擊向下箭頭顯示工具選項"
-                              AutomationProperties.Name="編輯工具">
-                        <ComboBox.ItemContainerStyle>
-                            <Style TargetType="ComboBoxItem" BasedOn="{StaticResource ToolSelectorItemStyle}">
-                                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OnToolItemClicked" />
-                            </Style>
-                        </ComboBox.ItemContainerStyle>
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Orientation="Horizontal">
-                                    <Viewbox Width="16" Height="16" Margin="0,0,7,0">
-                                        <Path Width="16" Height="16"
-                                              Data="{Binding Icon}"
-                                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}"
-                                              StrokeThickness="1.5"
-                                              StrokeStartLineCap="Round"
-                                              StrokeEndLineCap="Round"
-                                              StrokeLineJoin="Round"
-                                              Fill="Transparent" />
-                                    </Viewbox>
-                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center"
-                                               Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Control}}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <ToggleButton x:Name="EraserButton" Style="{StaticResource ToolbarToggleStyle}"
-                                  Padding="10,6" Margin="6,0,0,0" VerticalAlignment="Center"
-                                  Checked="OnEraserButtonChecked" Unchecked="OnEraserButtonUnchecked"
-                                  ToolTip="橡皮擦：拖曳擦除碰到的註解" AutomationProperties.Name="橡皮擦">
-                        <Viewbox Width="16" Height="16">
-                            <Path Width="16" Height="16"
-                                  Data="M3,12.5 L11.5,3.5 L14.5,6.5 L6,15 Z M4.5,15 L14.5,15"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                        </Viewbox>
-                    </ToggleButton>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="16,0,0,0" VerticalAlignment="Center">
-                    <Grid>
-                        <Button x:Name="ColorMenuButton" Style="{StaticResource SecondaryButtonStyle}" Click="OnColorMenuClick"
-                                Background="#FF3B30" Foreground="White"
-                                ToolTip="選擇註解顏色" AutomationProperties.Name="註解顏色">
-                            <TextBlock Text="顏色" />
-                        </Button>
-                        <Popup x:Name="ColorPopup" PlacementTarget="{Binding ElementName=ColorMenuButton}"
-                               Placement="Bottom" StaysOpen="False" AllowsTransparency="True" Closed="OnColorPopupClosed">
-                            <Border Style="{StaticResource CardBorderStyle}" Padding="10" Margin="0,4,0,0">
-                                <StackPanel>
-                                    <StackPanel Orientation="Horizontal" Margin="2,0,2,8">
-                                        <Ellipse x:Name="PopupCurrentColorSwatch" Width="22" Height="22" Fill="#FF3B30"
-                                                 Stroke="{DynamicResource BorderBrush}" StrokeThickness="1" Margin="0,0,8,0" />
-                                        <TextBlock Text="目前顏色" VerticalAlignment="Center" />
-                                    </StackPanel>
-                                    <UniformGrid Columns="8">
-                                    <RadioButton Background="#FF3B30" Tag="FF3B30" GroupName="AnnotationColor" IsChecked="True" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="紅色" AutomationProperties.Name="紅色" />
-                                    <RadioButton Background="#FF9500" Tag="FF9500" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="橘色" AutomationProperties.Name="橘色" />
-                                    <RadioButton Background="#FFCC00" Tag="FFCC00" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="黃色" AutomationProperties.Name="黃色" />
-                                    <RadioButton Background="#34C759" Tag="34C759" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="綠色" AutomationProperties.Name="綠色" />
-                                    <RadioButton Background="#00C7BE" Tag="00C7BE" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="青色" AutomationProperties.Name="青色" />
-                                    <RadioButton Background="#0A84FF" Tag="0A84FF" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="藍色" AutomationProperties.Name="藍色" />
-                                    <RadioButton Background="#5856D6" Tag="5856D6" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="靛色" AutomationProperties.Name="靛色" />
-                                    <RadioButton Background="#AF52DE" Tag="AF52DE" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="紫色" AutomationProperties.Name="紫色" />
-                                    <RadioButton Background="#FF2D55" Tag="FF2D55" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="桃紅色" AutomationProperties.Name="桃紅色" />
-                                    <RadioButton Background="#8B4513" Tag="8B4513" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="棕色" AutomationProperties.Name="棕色" />
-                                    <RadioButton Background="#6E6E73" Tag="6E6E73" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="灰色" AutomationProperties.Name="灰色" />
-                                    <RadioButton Background="#A8A8AD" Tag="A8A8AD" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="淺灰色" AutomationProperties.Name="淺灰色" />
-                                    <RadioButton Background="#1B1F2A" Tag="1B1F2A" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="黑色" AutomationProperties.Name="黑色" />
-                                    <RadioButton Background="#FFFFFF" Tag="FFFFFF" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="白色" AutomationProperties.Name="白色" />
-                                    <RadioButton Background="#B8F2A1" Tag="B8F2A1" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="淺綠色" AutomationProperties.Name="淺綠色" />
-                                    <RadioButton Background="#A7D8FF" Tag="A7D8FF" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="淺藍色" AutomationProperties.Name="淺藍色" />
-                                    </UniformGrid>
-                                </StackPanel>
-                            </Border>
-                        </Popup>
-                    </Grid>
-
-                    <TextBlock x:Name="StrokeWidthLabel" Text="線寬" Style="{StaticResource CaptionStyle}" Margin="10,0,4,0" VerticalAlignment="Center" />
-                    <ComboBox x:Name="StrokeCombo" Width="72" SelectionChanged="OnStrokeChanged" ToolTip="線條粗細"
-                              AutomationProperties.LabeledBy="{Binding ElementName=StrokeWidthLabel}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding StringFormat={}{0} px}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <Button x:Name="RotateRightButton" Style="{StaticResource EditorActionButtonStyle}" Margin="10,0,0,0" Click="OnRotateRightClick"
-                            ToolTip="右轉 90 度（註解將合併）" AutomationProperties.Name="右轉">
-                        <Viewbox Width="16" Height="16">
-                            <Path Width="16" Height="16"
-                                  Data="M13.66,10 A6,6 0 1 1 12.25,3.76 L15.33,6.67 M15.33,2.67 L15.33,6.67 L11.33,6.67"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="RotateLeftButton" Style="{StaticResource EditorActionButtonStyle}" Margin="2,0,0,0" Click="OnRotateLeftClick"
-                            ToolTip="左轉 90 度（註解將合併）" AutomationProperties.Name="左轉">
-                        <Viewbox Width="16" Height="16">
-                            <Path Width="16" Height="16"
-                                  Data="M2.34,10 A6,6 0 1 0 3.75,3.76 L0.67,6.67 M0.67,2.67 L0.67,6.67 L4.67,6.67"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="FlipVerticalButton" Style="{StaticResource EditorActionButtonStyle}" Margin="2,0,0,0" Click="OnFlipVerticalClick"
-                            ToolTip="垂直翻轉（上下鏡像，註解將合併）" AutomationProperties.Name="垂直翻轉">
-                        <Viewbox Width="16" Height="16">
-                            <Path Width="16" Height="16"
-                                  Data="M2.5,7 L8,3 L13.5,7 Z M2.5,9 L8,13 L13.5,9 Z M0.75,8 L15.25,8"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                        </Viewbox>
-                    </Button>
-                    <Button x:Name="FlipHorizontalButton" Style="{StaticResource EditorActionButtonStyle}" Margin="2,0,0,0" Click="OnFlipHorizontalClick"
-                            ToolTip="水平翻轉（左右鏡像，註解將合併）" AutomationProperties.Name="水平翻轉">
-                        <Viewbox Width="16" Height="16">
-                            <Path Width="16" Height="16"
-                                  Data="M7,2.5 L3,8 L7,13.5 Z M9,2.5 L13,8 L9,13.5 Z M8,0.75 L8,15.25"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                        </Viewbox>
-                    </Button>
-                    <ToggleButton x:Name="CropButton" Style="{StaticResource ToolbarToggleStyle}"
-                                  Padding="10,6" Margin="2,0,0,0" VerticalAlignment="Center"
-                                  Checked="OnCropButtonChecked" Unchecked="OnCropButtonUnchecked"
-                                  ToolTip="裁切圖片，確認後才套用" AutomationProperties.Name="裁切">
-                        <Viewbox Width="16" Height="16">
-                            <Path Width="16" Height="16"
-                                  Data="M5,1.5 L5,11 L14.5,11 M1.5,5 L11,5 L11,14.5"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ToggleButton}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                        </Viewbox>
-                    </ToggleButton>
-                </StackPanel>
-
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-                    <Button x:Name="UndoButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnUndoClick"
-                            ToolTip="復原 (Ctrl+Z)" AutomationProperties.Name="復原">
+                <WrapPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
                         <StackPanel Orientation="Horizontal">
-                            <Path Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"
-                                  Data="M5.5,3.5 L2,7 L5.5,10.5 M2,7 L9.5,7 A3.75,3.75 0 0 1 9.5,14.5"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                            <TextBlock Text="復原" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                            <RadioButton x:Name="PanToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Pan}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolPanToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolPan}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2,8 L2,6.5 C2,5.7 3.2,5.5 3.6,6.2 L3.6,3.5 C3.6,2.4 5.2,2.4 5.2,3.5 L5.2,6 L5.2,2.5 C5.2,1.4 6.8,1.4 6.8,2.5 L6.8,5.8 L6.8,3 C6.8,1.9 8.4,1.9 8.4,3 L8.4,6 L8.4,4 C8.4,2.9 10,2.9 10,4 L10,8 C10,11.5 8.1,14 5.2,14 C3.6,14 2.6,13.2 1.7,12 L0.4,10.2 C-0.3,9.2 1.1,8.2 2,9.1 L3.6,10.6"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
                         </StackPanel>
-                    </Button>
-                    <Button x:Name="RedoButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnRedoClick"
-                            ToolTip="重做 (Ctrl+Y)" AutomationProperties.Name="重做">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"
-                                  Data="M10.5,3.5 L14,7 L10.5,10.5 M14,7 L6.5,7 A3.75,3.75 0 0 0 6.5,14.5"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                            <TextBlock Text="重做" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                        </StackPanel>
-                    </Button>
-                    <Button x:Name="FitButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnFitClick"
-                            ToolTip="縮放至符合視窗 (Ctrl+0)" AutomationProperties.Name="符合視窗">
-                        <StackPanel Orientation="Horizontal">
-                            <Path Width="16" Height="16" Margin="0,0,5,0" VerticalAlignment="Center"
-                                  Data="M2,6 L2,2 L6,2 M10,2 L14,2 L14,6 M14,10 L14,14 L10,14 M6,14 L2,14 L2,10"
-                                  Fill="Transparent"
-                                  Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
-                                  StrokeThickness="1.5"
-                                  StrokeStartLineCap="Round"
-                                  StrokeEndLineCap="Round"
-                                  StrokeLineJoin="Round" />
-                            <TextBlock Text="符合視窗" VerticalAlignment="Center"
-                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
-                        </StackPanel>
-                    </Button>
-                </StackPanel>
+                    </Border>
 
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="TextToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Text}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolText}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolText}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2,3 L14,3 M8,3 L8,14 M5,14 L11,14"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                            <RadioButton x:Name="NumberToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Number}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolNumber}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolNumber}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M8,1 A7,7 0 1 1 8,15 A7,7 0 1 1 8,1 M6,6 C6,4.5 10,4.5 10,6 C10,8 6,8.5 6,11 L10,11"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                            <RadioButton x:Name="MosaicToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Mosaic}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolMosaic}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolMosaic}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M1,1 L6,1 L6,6 L1,6 Z M9,1 L15,1 L15,7 L9,7 Z M1,9 L7,9 L7,15 L1,15 Z M10,10 L15,10 L15,15 L10,15 Z"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="LineToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Line}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolLine}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolLine}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2,14 L14,2"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                            <RadioButton x:Name="ArrowToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Arrow}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolArrow}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolArrow}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M1,14 L14,1 M7,1 L14,1 L14,8"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                            <RadioButton x:Name="RectangleToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Rectangle}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolRectangle}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolRectangle}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2,3 L14,3 L14,13 L2,13 Z"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                            <RadioButton x:Name="EllipseToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Ellipse}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolEllipse}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolEllipse}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M15,8 A7,5 0 1 1 1,8 A7,5 0 1 1 15,8"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="PenToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Pen}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolPen}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolPen}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2,14 L5,13 L14,4 L12,2 L3,11 Z M10.5,3.5 L12.5,5.5"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                            <RadioButton x:Name="HighlighterToolButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Highlighter}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolHighlighter}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolHighlighter}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M3,11 L9,3 L13,6 L7,14 Z M2,14 L9,14"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton x:Name="EraserButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Eraser}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolEraserToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolEraser}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M3,12.5 L11.5,3.5 L14.5,6.5 L6,15 Z M4.5,15 L14.5,15"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                            <RadioButton x:Name="CropButton" GroupName="EditorTool" Style="{StaticResource EditorToolButtonStyle}"
+                                         Tag="{x:Static models:AnnotationTool.Crop}" Click="OnToolButtonClick"
+                                         ToolTip="{x:Static strings:AppStrings.ToolCropToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ToolCrop}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M5,1.5 L5,11 L14.5,11 M1.5,5 L11,5 L11,14.5"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=RadioButton}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </RadioButton>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <Grid>
+                                <Button x:Name="ColorMenuButton" Style="{StaticResource SecondaryButtonStyle}" Click="OnColorMenuClick"
+                                        Width="30" Height="30" Padding="0"
+                                        Background="#FF3B30" Foreground="White"
+                                        ToolTip="選擇註解顏色" AutomationProperties.Name="註解顏色" />
+                                <Popup x:Name="ColorPopup" PlacementTarget="{Binding ElementName=ColorMenuButton}"
+                                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True" Closed="OnColorPopupClosed">
+                                    <Border Style="{StaticResource CardBorderStyle}" Padding="10" Margin="0,4,0,0">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="2,0,2,8">
+                                                <Ellipse x:Name="PopupCurrentColorSwatch" Width="22" Height="22" Fill="#FF3B30"
+                                                         Stroke="{DynamicResource BorderBrush}" StrokeThickness="1" Margin="0,0,8,0" />
+                                                <TextBlock Text="目前顏色" VerticalAlignment="Center" />
+                                            </StackPanel>
+                                            <UniformGrid Columns="8">
+                                            <RadioButton Background="#FF3B30" Tag="FF3B30" GroupName="AnnotationColor" IsChecked="True" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="紅色" AutomationProperties.Name="紅色" />
+                                            <RadioButton Background="#FF9500" Tag="FF9500" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="橘色" AutomationProperties.Name="橘色" />
+                                            <RadioButton Background="#FFCC00" Tag="FFCC00" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="黃色" AutomationProperties.Name="黃色" />
+                                            <RadioButton Background="#34C759" Tag="34C759" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="綠色" AutomationProperties.Name="綠色" />
+                                            <RadioButton Background="#00C7BE" Tag="00C7BE" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="青色" AutomationProperties.Name="青色" />
+                                            <RadioButton Background="#0A84FF" Tag="0A84FF" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="藍色" AutomationProperties.Name="藍色" />
+                                            <RadioButton Background="#5856D6" Tag="5856D6" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="靛色" AutomationProperties.Name="靛色" />
+                                            <RadioButton Background="#AF52DE" Tag="AF52DE" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="紫色" AutomationProperties.Name="紫色" />
+                                            <RadioButton Background="#FF2D55" Tag="FF2D55" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="桃紅色" AutomationProperties.Name="桃紅色" />
+                                            <RadioButton Background="#8B4513" Tag="8B4513" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="棕色" AutomationProperties.Name="棕色" />
+                                            <RadioButton Background="#6E6E73" Tag="6E6E73" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="灰色" AutomationProperties.Name="灰色" />
+                                            <RadioButton Background="#A8A8AD" Tag="A8A8AD" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="淺灰色" AutomationProperties.Name="淺灰色" />
+                                            <RadioButton Background="#1B1F2A" Tag="1B1F2A" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="黑色" AutomationProperties.Name="黑色" />
+                                            <RadioButton Background="#FFFFFF" Tag="FFFFFF" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="白色" AutomationProperties.Name="白色" />
+                                            <RadioButton Background="#B8F2A1" Tag="B8F2A1" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="淺綠色" AutomationProperties.Name="淺綠色" />
+                                            <RadioButton Background="#A7D8FF" Tag="A7D8FF" GroupName="AnnotationColor" Style="{StaticResource ColorSwatchStyle}" Checked="OnColorChecked" ToolTip="淺藍色" AutomationProperties.Name="淺藍色" />
+                                            </UniformGrid>
+                                        </StackPanel>
+                                    </Border>
+                                </Popup>
+                            </Grid>
+
+                            <TextBlock x:Name="StrokeWidthLabel" Text="線寬" Style="{StaticResource CaptionStyle}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}" Margin="6,0,4,0" VerticalAlignment="Center" />
+                            <ComboBox x:Name="StrokeCombo" Width="64" SelectionChanged="OnStrokeChanged" ToolTip="線條粗細"
+                                      AutomationProperties.LabeledBy="{Binding ElementName=StrokeWidthLabel}">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding StringFormat={}{0} px}" />
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="RotateRightButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnRotateRightClick"
+                                    ToolTip="{x:Static strings:AppStrings.RotateRightToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.RotateRight}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M13.66,10 A6,6 0 1 1 12.25,3.76 L15.33,6.67 M15.33,2.67 L15.33,6.67 L11.33,6.67"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </Button>
+                            <Button x:Name="RotateLeftButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnRotateLeftClick"
+                                    ToolTip="{x:Static strings:AppStrings.RotateLeftToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.RotateLeft}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2.34,10 A6,6 0 1 0 3.75,3.76 L0.67,6.67 M0.67,2.67 L0.67,6.67 L4.67,6.67"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </Button>
+                            <Button x:Name="FlipVerticalButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnFlipVerticalClick"
+                                    ToolTip="{x:Static strings:AppStrings.FlipVerticalToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.FlipVertical}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2.5,7 L8,3 L13.5,7 Z M2.5,9 L8,13 L13.5,9 Z M0.75,8 L15.25,8"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </Button>
+                            <Button x:Name="FlipHorizontalButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnFlipHorizontalClick"
+                                    ToolTip="{x:Static strings:AppStrings.FlipHorizontalToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.FlipHorizontal}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M7,2.5 L3,8 L7,13.5 Z M9,2.5 L13,8 L9,13.5 Z M8,0.75 L8,15.25"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource EditorToolGroupStyle}">
+                        <StackPanel Orientation="Horizontal">
+                            <Button x:Name="UndoButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnUndoClick"
+                                    ToolTip="{x:Static strings:AppStrings.UndoToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ActionUndo}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M5.5,3.5 L2,7 L5.5,10.5 M2,7 L9.5,7 A3.75,3.75 0 0 1 9.5,14.5"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </Button>
+                            <Button x:Name="RedoButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnRedoClick"
+                                    ToolTip="{x:Static strings:AppStrings.RedoToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ActionRedo}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M10.5,3.5 L14,7 L10.5,10.5 M14,7 L6.5,7 A3.75,3.75 0 0 0 6.5,14.5"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </Button>
+                            <Button x:Name="FitButton" Style="{StaticResource EditorActionButtonStyle}" Click="OnFitClick"
+                                    ToolTip="{x:Static strings:AppStrings.FitWindowToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ActionFitWindow}">
+                                <Viewbox Width="16" Height="16">
+                                    <Path Width="16" Height="16"
+                                          Data="M2,6 L2,2 L6,2 M10,2 L14,2 L14,6 M14,10 L14,14 L10,14 M6,14 L2,14 L2,10"
+                                          Fill="Transparent"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round"
+                                          StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round" />
+                                </Viewbox>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </WrapPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="10,0,0,0">
                     <Button x:Name="CopyButton" Content="複製" Style="{StaticResource PrimaryButtonStyle}" Margin="4,0" Click="OnCopyClick" ToolTip="複製到剪貼簿 (Ctrl+C)；裁切選取時僅複製選取範圍" />
-                    <Button x:Name="SaveAsButton" Content="{x:Static strings:AppStrings.ActionSaveAs}" Style="{StaticResource SecondaryButtonStyle}" Margin="4,0" Click="OnSaveAsClick" ToolTip="{x:Static strings:AppStrings.SaveAsToolTip}" />
                     <Button x:Name="SaveLibraryButton" Content="{x:Static strings:AppStrings.ActionSave}" Style="{StaticResource SecondaryButtonStyle}" Margin="4,0" Click="OnSaveLibraryClick" ToolTip="{x:Static strings:AppStrings.SaveToLibraryToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ActionSave}" />
+                    <Button x:Name="SaveAsButton" Content="{x:Static strings:AppStrings.ActionSaveAs}" Style="{StaticResource SecondaryButtonStyle}" Margin="4,0" Click="OnSaveAsClick" ToolTip="{x:Static strings:AppStrings.SaveAsToolTip}" />
                     <Button x:Name="DiscardButton" Content="{x:Static strings:AppStrings.ActionDiscard}" Style="{StaticResource SecondaryButtonStyle}" Margin="4,0" Click="OnDiscardClick" ToolTip="{x:Static strings:AppStrings.DiscardToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ActionDiscard}" Visibility="Collapsed" />
                     <Button x:Name="CloseButton" Content="{x:Static strings:AppStrings.ActionClose}" Style="{StaticResource SecondaryButtonStyle}" Margin="4,0" Click="OnCloseClick" ToolTip="{x:Static strings:AppStrings.CloseEditorToolTip}" AutomationProperties.Name="{x:Static strings:AppStrings.ActionClose}" Visibility="Collapsed" />
                 </StackPanel>

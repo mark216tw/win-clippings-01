@@ -24,6 +24,9 @@ public static class AppStrings
     public const string CaptureDelayed = "延遲擷取";
     public const string CaptureWindow = "視窗擷取";
     public const string ScreenAnnotation = "螢幕標註";
+    public const string ScreenAnnotationToolTip = "開始螢幕標註";
+    public const string StopScreenAnnotation = "結束標註";
+    public const string StopScreenAnnotationToolTip = "結束目前的螢幕標註";
     public const string StartWindowRecording = "選擇視窗錄影";
     public const string StartFullScreenRecording = "全螢幕錄影";
     public const string RecordingFullScreen = "全螢幕";
@@ -34,8 +37,15 @@ public static class AppStrings
     public const string OpenLastRecording = "開啟上次錄影";
     public const string OpenRecordingFolder = "開啟錄影資料夾";
     public const string CaptureSourceFromClipboard = "剪貼簿匯入";
+    public const string CaptureCursor = "擷取滑鼠游標";
+    public const string CaptureCursorToolTip = "開啟後所有截圖模式都會包含滑鼠游標（預設關閉）";
 
     public const string ActionUndo = "復原";
+    public const string ActionRedo = "重做";
+    public const string ActionFitWindow = "符合視窗";
+    public const string UndoToolTip = "復原 (Ctrl+Z)";
+    public const string RedoToolTip = "重做 (Ctrl+Y)";
+    public const string FitWindowToolTip = "縮放至符合視窗 (Ctrl+0)";
     public const string ActionCut = "剪下";
     public const string ActionCopy = "複製";
     public const string ActionPaste = "貼上";
@@ -55,6 +65,31 @@ public static class AppStrings
     public const string ActionRefresh = "重新整理";
     public const string ActionAddToCapture = "加入擷取";
     public const string ActionAddToCaptureToolTip = "載入到最近擷取";
+
+    public const string ToolPan = "平移";
+    public const string ToolPanToolTip = "平移（或按滑鼠右鍵）";
+    public const string ToolPen = "畫筆";
+    public const string ToolHighlighter = "螢光筆";
+    public const string ToolText = "文字";
+    public const string ToolNumber = "編號";
+    public const string ToolLine = "直線";
+    public const string ToolArrow = "箭頭";
+    public const string ToolRectangle = "矩形";
+    public const string ToolEllipse = "橢圓";
+    public const string ToolMosaic = "馬賽克";
+    public const string ToolEraser = "橡皮擦";
+    public const string ToolEraserToolTip = "橡皮擦：拖曳擦除碰到的註解";
+    public const string ToolCrop = "裁切";
+    public const string ToolCropToolTip = "裁切圖片，確認後才套用";
+
+    public const string RotateRight = "右轉";
+    public const string RotateRightToolTip = "右轉 90 度（註解將合併）";
+    public const string RotateLeft = "左轉";
+    public const string RotateLeftToolTip = "左轉 90 度（註解將合併）";
+    public const string FlipVertical = "垂直翻轉";
+    public const string FlipVerticalToolTip = "垂直翻轉（上下鏡像，註解將合併）";
+    public const string FlipHorizontal = "水平翻轉";
+    public const string FlipHorizontalToolTip = "水平翻轉（左右鏡像，註解將合併）";
 
     public const string EmptyCaptureHistory = "還沒有任何擷取，按 Ctrl+Shift+X 開始吧。";
     public const string EmptyClipboardImages = "目前沒有圖片紀錄。";

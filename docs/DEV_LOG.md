@@ -4,6 +4,138 @@
 
 ---
 
+## 2026-11-05 - v1.24.1
+
+### 目標
+
+調整螢幕標註工具列順序，將雷射筆移到橡皮擦右側。
+
+### 變更
+
+- `Views/AnnotationToolbarWindow.xaml`：將 `LaserButton` 區塊從工具列最左側移到 `EraserButton` 之後；快捷鍵、`Tag`、Click 事件與選取狀態同步邏輯皆不變。
+- `Directory.Build.props`：版本升至 1.24.1。
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`。
+
+### 問題與解法
+
+- 工具列順序調整只涉及 XAML 排列，程式碼以控制項名稱更新選取狀態，不需修改事件邏輯。
+
+### 發佈
+
+- Release 資產：`Clippings-1.24.1-win-x64-framework-dependent.zip`（17,638,385 bytes）、`Clippings-1.24.1-win-arm64-framework-dependent.zip`（16,850,013 bytes）。
+- SHA-256：x64 `5169CC56EC18DFF248525483047AE1D2D4ECF580726B40F341D56235CC940BCA`；ARM64 `1FAA477CF5FFC52EE946D793E15ACFA63A64FCE81BE6B8847BBB79E4A965D90A`。
+- GitHub Release：<https://github.com/mark216tw/win-clippings-01/releases/tag/v1.24.1>
+
+### 待辦
+
+- 尚未實機檢查調整後的工具列寬度與各主題選取態。
+
+### 日期與版本
+
+2026-11-05，v1.24.1。
+
+---
+
+## 2026-11-05 - v1.24.0
+
+### 目標
+
+全面提升全 App 介面對比度，新增截圖游標選項與主畫面螢幕標註入口，並移除快速擷取區塊的多餘快捷鍵說明。
+
+### 變更
+
+- `Styles/*.xaml`：新增 `ControlBorderBrush`、`CardBorderBrush`、`AccentForegroundBrush`；調整次要文字、hover、sidebar、primary hover、Light 收藏色與各主題邊框色。
+- `Styles/Controls.xaml`：輸入框／下拉選單／次要按鈕改用 3:1 控制項邊框；卡片、選單、Tooltip、編輯器工具群組改用 `CardBorderBrush`；`IconButtonStyle` 改用主要文字色；Accent 填色選取態改用 `AccentForegroundBrush`。
+- `AppSettings`：新增 `CaptureCursor`，預設 `false`。
+- `SettingsPage`：新增「擷取滑鼠游標」勾選項，加入載入、儲存與未儲存變更比對。
+- `NativeMethods`、`CursorRenderer`、`ScreenCaptureService`：GDI 截圖可在 `BitBlt` 後將目前游標繪製到擷取範圍，支援 hotspot、隱藏游標與超出範圍處理。
+- `WindowsGraphicsCaptureService`、`CaptureCoordinator`：視窗擷取支援 `IsCursorCaptureEnabled`；較舊系統在開啟游標時改用 GDI 備援。
+- `MainWindow`：側欄新增「螢幕標註」卡片與按鈕；依 `ScreenAnnotationService.IsActive` 切換開始／結束文字與 ToolTip；移除 `HotkeyHint`。
+- `AppSettingsTests`：新增擷取游標預設值與 Clone 測試。
+- `Directory.Build.props`：版本升至 1.24.0。
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`README.md`、`docs/USER_GUIDE.md`、`docs/TECHNICAL.md`。
+
+### 問題與解法
+
+- 淺色主題的次要文字在側欄低於 4.5:1；重新調整四個淺色主題的 `TextSecondaryBrush` 與側欄色，量測結果皆 ≥ 4.57:1。
+- 控制項邊框原本僅約 1.3–1.7:1；新增獨立的 `ControlBorderBrush`，避免把裝飾線整體加深。
+- 深色主題的 Accent 顏色較淺，白圖示對比不足；新增 `AccentForegroundBrush`，並將標註工具列選取態改用 `PrimaryButtonBrush`。
+- GDI `BitBlt` 不會包含游標；以 `GetCursorInfo`／`GetIconInfo`／`DrawIconEx` 在記憶體 DC 上補繪，並在設定 alpha 前完成。
+- Windows.Graphics.Capture 的游標屬性僅支援 Windows 10 2004 以上；為確保預設不含游標，1903–1909 的視窗擷取改用 GDI 備援。
+
+### 待辦
+
+- 尚未實機驗證多螢幕、混合 DPI、不同游標類型與 Windows 10 1903–1909 的視窗擷取。
+- 尚未實機檢查 920×620 視窗下新增的螢幕標註卡片與側欄導覽空間。
+
+### 日期與版本
+
+2026-11-05，v1.24.0。
+
+---
+
+## 2026-11-05 - v1.23.1
+
+### 目標
+
+修正編輯器復原標註時會自動變成適合視窗的問題，並微調工具列按鈕順序、對比與顏色區塊尺寸。
+
+### 變更
+
+- `Views/EditorWindow.xaml.cs`：`RestoreSnapshot()` 以影像參考是否相同判斷復原類型；標註／橡皮擦的復原保留目前縮放與位移，裁切／旋轉等影像變更仍重新 `FitCanvas`。
+- `Views/EditorWindow.xaml`：輸出按鈕改為「複製、儲存、另存新檔」；標註與筆刷群組直接互換位置；移除工具群組標題；顏色按鈕改為 30×30 色塊並移除文字，線寬下拉縮為 64 px；平移 ToolTip 改為「平移（或按滑鼠右鍵）」。
+- `Styles/Controls.xaml`：`EditorToolButtonStyle` 與 `EditorActionButtonStyle` 預設前景改用 `TextPrimaryBrush`，提高圖示對比。
+- `Strings/AppStrings.cs`：新增 `ToolPanToolTip`，移除不再使用的工具群組標題字串。
+- `Directory.Build.props`：版本升至 1.23.1，`FileVersion` 同步更新。
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`README.md`、`docs/USER_GUIDE.md`、`docs/TECHNICAL.md`。
+
+### 問題與解法
+
+- `RestoreSnapshot()` 原本一律 `FitCanvas(force: true)`，導致任何復原都重設縮放。改為比較目前影像與快照影像是否為同一物件：相同代表只還原標註，保留檢視；不同代表裁切或旋轉，重新符合視窗。
+- 顏色按鈕原本是文字按鈕，佔用較多寬度；改為色塊後仍保留 ToolTip 與無障礙名稱。
+
+### 待辦
+
+- 尚未實機檢查各主題下的圖示對比、顏色色塊尺寸與工具列換行。
+
+### 日期與版本
+
+2026-11-05，v1.23.1。
+
+---
+
+## 2026-11-05 - v1.23.0
+
+### 目標
+
+調整編輯器初始顯示比例與工具列操作：擷圖後固定以 80% 開啟，並把原本的工具下拉選單改成更容易點選的分段式工具列。
+
+### 變更
+
+- `Views/EditorWindow.xaml`：移除工具 `ComboBox`，改為 `WrapPanel` 分段式工具列，分成移動、筆刷、形狀、標註、編輯、樣式、調整、歷史等群組；橡皮擦與裁切一併放入工具列；復原／重做／符合視窗改為純圖示按鈕；工具按鈕改用 `RadioButton` 並共用 `GroupName`。
+- `Views/EditorWindow.xaml.cs`：新增 `RegisterToolButtons()`、`OnToolButtonClick()`、`UpdateToolVisuals()`，整合工具選擇、橡皮擦與裁切狀態；移除 `ToolCombo`、`EditorToolOption` 與舊的 SplitButton 事件處理；預設縮放改為 `DefaultZoom = 0.8f`，並將 `_fitted` 更名為 `_initialZoomApplied`。
+- `Styles/Controls.xaml`：新增 `EditorToolGroupStyle`、`EditorToolButtonStyle`；移除已不再使用的 `ToolSelectorStyle`、`ToolSelectorItemStyle`、`ToolbarToggleStyle`。
+- `Strings/AppStrings.cs`：集中新增工具名稱、工具群組名稱、旋轉／翻轉與歷史操作字串。
+- `Directory.Build.props`：版本升至 1.23.0。
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`README.md`、`docs/USER_GUIDE.md`、`docs/TECHNICAL.md`。
+
+### 問題與解法
+
+- 工具全部展開後在 900 px 最小視窗會超出寬度；改以 `WrapPanel` 讓工具群組自動換行，輸出按鈕仍固定在右側。
+- 原本橡皮擦與裁切是獨立的 `ToggleButton`，選取狀態與 `ToolCombo` 互相牽動；改為同一個 `RadioButton` 群組並由 `_tool` 統一管理，避免多處同步造成狀態不一致。
+- 「復原／重做／符合視窗」保留文字標籤會增加換行機率；改為純圖示並保留 ToolTip 與 `AutomationProperties.Name`。
+
+### 待辦
+
+- 尚未在 900 px、1180 px 與最大化視窗下實機檢查工具群組換行與各主題的選取態。
+- 尚未實測高 DPI 與 ARM64 執行環境的圖示清晰度。
+
+### 日期與版本
+
+2026-11-05，v1.23.0。
+
+---
+
 ## 2026-11-04 - v1.22.1
 
 ### 目標

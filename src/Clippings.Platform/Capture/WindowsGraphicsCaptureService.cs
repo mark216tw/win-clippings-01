@@ -22,7 +22,10 @@ public sealed class WindowsGraphicsCaptureService
         OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362) &&
         GraphicsCaptureSession.IsSupported();
 
-    public async Task<SKBitmap> CaptureWindowAsync(IntPtr window, CancellationToken cancellationToken = default)
+    public async Task<SKBitmap> CaptureWindowAsync(
+        IntPtr window,
+        bool includeCursor = false,
+        CancellationToken cancellationToken = default)
     {
         if (!IsSupported)
         {
@@ -37,6 +40,11 @@ public sealed class WindowsGraphicsCaptureService
             1,
             item.Size);
         using var session = framePool.CreateCaptureSession(item);
+        if (OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041))
+        {
+            session.IsCursorCaptureEnabled = includeCursor;
+        }
+
         var frameArrived = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         void OnFrameArrived(Direct3D11CaptureFramePool sender, object args)

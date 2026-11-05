@@ -1,6 +1,7 @@
 <UserControl x:Class="Clippings.App.Views.SettingsPage"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:strings="clr-namespace:Clippings.App.Strings"
              PreviewKeyDown="OnPagePreviewKeyDown">
 
     <Grid>
@@ -108,6 +109,10 @@
                     <CheckBox x:Name="AutoCopyCheck" Content="擷取後自動複製到剪貼簿" Margin="0,14,0,0" />
                     <CheckBox x:Name="CaptureSoundCheck" Content="使用快捷鍵擷取完成時播放音效" Margin="0,10,0,0" />
                     <CheckBox x:Name="MagnifierCheck" Content="選取時顯示放大鏡與顏色資訊" Margin="0,10,0,0" />
+                    <CheckBox x:Name="CaptureCursorCheck"
+                              Content="{x:Static strings:AppStrings.CaptureCursor}"
+                              ToolTip="{x:Static strings:AppStrings.CaptureCursorToolTip}"
+                              Margin="0,10,0,0" />
                 </StackPanel>
             </Border>
 

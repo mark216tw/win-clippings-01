@@ -36,6 +36,24 @@ public class AppSettingsTests
     }
 
     [Fact]
+    public void CaptureCursor_IsDisabledByDefault()
+    {
+        Assert.False(new AppSettings().CaptureCursor);
+    }
+
+    [Fact]
+    public void Clone_CopiesCaptureCursor()
+    {
+        var settings = new AppSettings { CaptureCursor = true };
+        var clone = settings.Clone();
+
+        Assert.True(clone.CaptureCursor);
+
+        clone.CaptureCursor = false;
+        Assert.True(settings.CaptureCursor);
+    }
+
+    [Fact]
     public void WindowHotkey_HasDefaultGesture()
     {
         Assert.Equal("Ctrl+Shift+W", new AppSettings().HotkeyWindow);

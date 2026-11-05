@@ -22,6 +22,9 @@ public static class NativeMethods
     public const int SrcCopy = 0x00CC0020;
     public const int CaptureBlt = 0x40000000;
 
+    public const uint CursorShowing = 0x0001;
+    public const uint DiNormal = 0x0003;
+
     public const uint DibRgbColors = 0;
     public const uint BiRgb = 0;
 
@@ -86,6 +89,25 @@ public static class NativeMethods
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
         public string DeviceName;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct CursorInfo
+    {
+        public int Size;
+        public uint Flags;
+        public IntPtr Cursor;
+        public Point ScreenPosition;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct IconInfo
+    {
+        public int IsIcon;
+        public int HotspotX;
+        public int HotspotY;
+        public IntPtr MaskBitmap;
+        public IntPtr ColorBitmap;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -202,6 +224,27 @@ public static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool GetCursorPos(out Point point);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetCursorInfo(ref CursorInfo info);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool GetIconInfo(IntPtr icon, out IconInfo info);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DrawIconEx(
+        IntPtr hdc,
+        int x,
+        int y,
+        IntPtr icon,
+        int width,
+        int height,
+        uint step,
+        IntPtr brush,
+        uint flags);
 
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();

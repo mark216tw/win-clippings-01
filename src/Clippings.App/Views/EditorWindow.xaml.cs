@@ -25,13 +25,14 @@ public partial class EditorWindow : Window
     private const double CropHandleSize = 9;
     private const double CropResizeHitThickness = 8;
     private const int MinimumCropSize = 8;
+    private const float DefaultZoom = 0.8f;
     private static readonly FontFamily EditorFontFamily = new("Microsoft JhengHei UI");
     private static readonly SKTypeface EditorTypeface = SKTypeface.FromFamilyName("Microsoft JhengHei UI") ?? SKTypeface.Default;
 
     private readonly List<Annotation> _annotations = [];
     private readonly UndoStack<EditorSnapshot> _undo;
     private readonly Dictionary<Annotation, SKBitmap> _mosaicCache = [];
-    private readonly IReadOnlyList<EditorToolOption> _toolOptions = CreateToolOptions();
+    private readonly Dictionary<AnnotationTool, RadioButton> _toolButtons = [];
     private readonly ImageFormat _defaultFormat;
     private readonly int _jpegQuality;
     private readonly string _saveDirectory;
@@ -48,9 +49,9 @@ public partial class EditorWindow : Window
     private AnnotationTool _tool = AnnotationTool.Pan;
     private AnnotationTool _toolBeforeCrop = AnnotationTool.Pan;
     private AnnotationTool _toolBeforeEraser = AnnotationTool.Pan;
-    private float _zoom = 1;
+    private float _zoom = DefaultZoom;
     private SKPoint _offset;
-    private bool _fitted;
+    private bool _initialZoomApplied;
     private bool _panning;
     private MouseButton? _panButton;
     private Point _panStart;
@@ -132,11 +133,10 @@ public partial class EditorWindow : Window
             StrokeCombo.Items.Add(20);
             StrokeCombo.SelectedIndex = 1;
 
-            ToolCombo.ItemsSource = _toolOptions;
+            RegisterToolButtons();
             _initialized = true;
-            ToolCombo.SelectedItem = _toolOptions.First(option => option.Tool == _tool);
+            UpdateToolVisuals();
 
-            UpdateToolFaceState();
             UpdateUndoButtons();
             UpdateStatus();
             UpdateOverlayLayout();
@@ -158,21 +158,23 @@ public partial class EditorWindow : Window
 
     private float EraserTolerance => Math.Max(8f, _strokeWidth * 2f);
 
-    private static IReadOnlyList<EditorToolOption> CreateToolOptions()
-        =>
-        [
-            new(AnnotationTool.Pan, "平移", "M2,8 L2,6.5 C2,5.7 3.2,5.5 3.6,6.2 L3.6,3.5 C3.6,2.4 5.2,2.4 5.2,3.5 L5.2,6 L5.2,2.5 C5.2,1.4 6.8,1.4 6.8,2.5 L6.8,5.8 L6.8,3 C6.8,1.9 8.4,1.9 8.4,3 L8.4,6 L8.4,4 C8.4,2.9 10,2.9 10,4 L10,8 C10,11.5 8.1,14 5.2,14 C3.6,14 2.6,13.2 1.7,12 L0.4,10.2 C-0.3,9.2 1.1,8.2 2,9.1 L3.6,10.6"),
-            new(AnnotationTool.Pen, "畫筆", "M2,14 L5,13 L14,4 L12,2 L3,11 Z M10.5,3.5 L12.5,5.5"),
-            new(AnnotationTool.Highlighter, "螢光筆", "M3,11 L9,3 L13,6 L7,14 Z M2,14 L9,14"),
-            new(AnnotationTool.Text, "文字", "M2,3 L14,3 M8,3 L8,14 M5,14 L11,14"),
-            new(AnnotationTool.Number, "編號", "M8,1 A7,7 0 1 1 8,15 A7,7 0 1 1 8,1 M6,6 C6,4.5 10,4.5 10,6 C10,8 6,8.5 6,11 L10,11"),
-            new(AnnotationTool.Line, "直線", "M2,14 L14,2"),
-            new(AnnotationTool.Arrow, "箭頭", "M1,14 L14,1 M7,1 L14,1 L14,8"),
-            new(AnnotationTool.Rectangle, "矩形", "M2,3 L14,3 L14,13 L2,13 Z"),
-            new(AnnotationTool.Ellipse, "橢圓", "M15,8 A7,5 0 1 1 1,8 A7,5 0 1 1 15,8"),
-            new(AnnotationTool.Mosaic, "馬賽克", "M1,1 L6,1 L6,6 L1,6 Z M9,1 L15,1 L15,7 L9,7 Z M1,9 L7,9 L7,15 L1,15 Z M10,10 L15,10 L15,15 L10,15 Z"),
+    private void RegisterToolButtons()
+    {
+        AddToolButton(AnnotationTool.Pan, PanToolButton);
+        AddToolButton(AnnotationTool.Pen, PenToolButton);
+        AddToolButton(AnnotationTool.Highlighter, HighlighterToolButton);
+        AddToolButton(AnnotationTool.Line, LineToolButton);
+        AddToolButton(AnnotationTool.Arrow, ArrowToolButton);
+        AddToolButton(AnnotationTool.Rectangle, RectangleToolButton);
+        AddToolButton(AnnotationTool.Ellipse, EllipseToolButton);
+        AddToolButton(AnnotationTool.Text, TextToolButton);
+        AddToolButton(AnnotationTool.Number, NumberToolButton);
+        AddToolButton(AnnotationTool.Mosaic, MosaicToolButton);
+        AddToolButton(AnnotationTool.Eraser, EraserButton);
+        AddToolButton(AnnotationTool.Crop, CropButton);
+    }
 
-        ];
+    private void AddToolButton(AnnotationTool tool, RadioButton button) => _toolButtons[tool] = button;
 
     private void OnSourceInitialized(object? sender, EventArgs e)
     {
@@ -213,27 +215,27 @@ public partial class EditorWindow : Window
             return;
         }
 
-        if (!_fitted && CanvasElement.ActualWidth > 1 && CanvasElement.ActualHeight > 1)
+        if (!_initialZoomApplied && CanvasElement.ActualWidth > 1 && CanvasElement.ActualHeight > 1)
         {
-            ApplyActualSize();
+            ApplyDefaultZoom();
         }
 
         UpdateZoomText();
         UpdateOverlayLayout();
     }
 
-    private void ApplyActualSize()
+    private void ApplyDefaultZoom()
     {
         if (Bitmap.Width <= 0 || Bitmap.Height <= 0)
         {
             return;
         }
 
-        _zoom = 1;
+        _zoom = DefaultZoom;
         _offset = new SKPoint(
             (float)((CanvasElement.ActualWidth - Bitmap.Width * _zoom) / 2),
             (float)((CanvasElement.ActualHeight - Bitmap.Height * _zoom) / 2));
-        _fitted = true;
+        _initialZoomApplied = true;
         UpdateZoomText();
         UpdateOverlayLayout();
         CanvasElement.InvalidateVisual();
@@ -246,7 +248,7 @@ public partial class EditorWindow : Window
             return;
         }
 
-        if (!force && _fitted)
+        if (!force && _initialZoomApplied)
         {
             return;
         }
@@ -262,7 +264,7 @@ public partial class EditorWindow : Window
         _offset = new SKPoint(
             (float)((CanvasElement.ActualWidth - Bitmap.Width * _zoom) / 2),
             (float)((CanvasElement.ActualHeight - Bitmap.Height * _zoom) / 2));
-        _fitted = true;
+        _initialZoomApplied = true;
         UpdateZoomText();
         UpdateOverlayLayout();
         CanvasElement.InvalidateVisual();
@@ -1134,14 +1136,25 @@ public partial class EditorWindow : Window
     {
         ClearCropSelection();
         ClearMosaicCache();
-        _image.Release();
-        _image = snapshot.TakeImage();
+        var currentImage = _image;
+        var restoredImage = snapshot.TakeImage();
+        var imageChanged = !ReferenceEquals(currentImage, restoredImage);
+        currentImage.Release();
+        _image = restoredImage;
         _annotations.Clear();
         _annotations.AddRange(snapshot.Annotations);
         _nextNumber = snapshot.NextNumber;
-        _fitted = false;
         UpdateStatus();
-        FitCanvas(force: true);
+
+        if (imageChanged)
+        {
+            _initialZoomApplied = false;
+            FitCanvas(force: true);
+            return;
+        }
+
+        UpdateOverlayLayout();
+        CanvasElement.InvalidateVisual();
     }
 
     private void ApplyCrop(PixelRect selection)
@@ -1166,7 +1179,7 @@ public partial class EditorWindow : Window
         ClearMosaicCache();
         UpdateUndoButtons();
         IsDirty = true;
-        _fitted = false;
+        _initialZoomApplied = false;
         UpdateStatus();
         FitCanvas(force: true);
     }
@@ -1185,9 +1198,9 @@ public partial class EditorWindow : Window
         _draft = null;
         _draftPoints = null;
 
-        if (CropButton?.IsChecked == true)
+        if (_tool == AnnotationTool.Crop)
         {
-            CropButton.IsChecked = false;
+            ApplyTool(_toolBeforeCrop);
         }
 
         ClearCropSelection();
@@ -1211,221 +1224,93 @@ public partial class EditorWindow : Window
         ClearMosaicCache();
         UpdateUndoButtons();
         IsDirty = true;
-        _fitted = false;
+        _initialZoomApplied = false;
         UpdateStatus();
         FitCanvas(force: true);
     }
 
-    private void OnEraserButtonChecked(object sender, RoutedEventArgs e)
+    private void OnToolButtonClick(object sender, RoutedEventArgs e)
     {
-        if (!_initialized || CanvasElement is null || StatusText is null)
+        if (!_initialized || sender is not FrameworkElement { Tag: AnnotationTool tool })
         {
             return;
         }
 
-        if (_tool != AnnotationTool.Eraser)
+        if (tool == _tool)
         {
-            _toolBeforeEraser = _tool;
-        }
-
-        if (CropButton?.IsChecked == true)
-        {
-            CropButton.IsChecked = false;
-        }
-
-        EndErase();
-        StopPan(releaseCapture: true);
-        ClearCropSelection();
-        _tool = AnnotationTool.Eraser;
-        _toolBeforeCrop = AnnotationTool.Eraser;
-        _draft = null;
-        _draftPoints = null;
-        UpdateCanvasCursor();
-        UpdateToolFaceState();
-        CanvasElement.InvalidateVisual();
-        StatusText.Text = ToolStatusText(_tool);
-    }
-
-    private void OnEraserButtonUnchecked(object sender, RoutedEventArgs e)
-    {
-        if (!_initialized || CanvasElement is null || StatusText is null ||
-            _tool != AnnotationTool.Eraser)
-        {
-            return;
-        }
-
-        EndErase();
-        var tool = ToolCombo.SelectedItem is EditorToolOption option ? option.Tool : _toolBeforeEraser;
-        _tool = tool;
-        _toolBeforeCrop = tool;
-        _draft = null;
-        _draftPoints = null;
-        UpdateCanvasCursor();
-        UpdateToolFaceState();
-        CanvasElement.InvalidateVisual();
-        StatusText.Text = ToolStatusText(tool);
-    }
-
-    private void OnToolItemClicked(object sender, MouseButtonEventArgs e)
-    {
-        if (!_initialized || sender is not ComboBoxItem { DataContext: EditorToolOption option })
-        {
-            return;
-        }
-
-        if (_tool != AnnotationTool.Eraser && _tool != AnnotationTool.Crop)
-        {
-            return;
-        }
-
-        ApplyTool(option);
-    }
-
-    private void OnToolComboPreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (!_initialized || sender is not ComboBox combo)
-        {
-            return;
-        }
-
-        if (IsInsideToolComboToggle(combo, e.OriginalSource as DependencyObject))
-        {
-            return;
-        }
-
-        e.Handled = true;
-        if (combo.SelectedItem is EditorToolOption option)
-        {
-            ApplyTool(option);
-        }
-    }
-
-    private static bool IsInsideToolComboToggle(ComboBox combo, DependencyObject? source)
-    {
-        for (var current = source; current is not null && !ReferenceEquals(current, combo);)
-        {
-            if (current is System.Windows.Controls.Primitives.ToggleButton)
+            if (tool == AnnotationTool.Eraser)
             {
-                return true;
+                ApplyTool(_toolBeforeEraser);
+            }
+            else if (tool == AnnotationTool.Crop)
+            {
+                ApplyTool(_toolBeforeCrop);
             }
 
-            current = current switch
-            {
-                Visual or System.Windows.Media.Media3D.Visual3D => VisualTreeHelper.GetParent(current),
-                ContentElement or FrameworkContentElement => LogicalTreeHelper.GetParent(current),
-                _ => null,
-            };
+            return;
         }
 
-        return false;
+        ApplyTool(tool);
     }
 
-    private void OnToolSelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ApplyTool(AnnotationTool tool)
     {
         if (!_initialized)
         {
             return;
         }
 
-        if (ToolCombo.SelectedItem is EditorToolOption option)
+        if (tool == AnnotationTool.Eraser && _tool != AnnotationTool.Eraser)
         {
-            ApplyTool(option);
+            _toolBeforeEraser = _tool == AnnotationTool.Crop ? _toolBeforeCrop : _tool;
         }
-    }
-
-    private void ApplyTool(EditorToolOption option)
-    {
-        ArgumentNullException.ThrowIfNull(option);
-
-        if (CropButton?.IsChecked == true)
+        else if (tool == AnnotationTool.Crop && _tool != AnnotationTool.Crop)
         {
-            CropButton.IsChecked = false;
+            _toolBeforeCrop = _tool == AnnotationTool.Eraser ? _toolBeforeEraser : _tool;
         }
 
-        EndErase();
+        if (tool != AnnotationTool.Eraser)
+        {
+            EndErase();
+        }
+
+        if (tool != AnnotationTool.Crop)
+        {
+            ClearCropSelection();
+        }
+
         StopPan(releaseCapture: true);
-        ClearCropSelection();
-        var tool = option.Tool;
         _tool = tool;
-        _toolBeforeCrop = tool;
 
-        if (EraserButton?.IsChecked == true)
+        if (tool is not (AnnotationTool.Crop or AnnotationTool.Eraser))
         {
-            EraserButton.IsChecked = false;
+            _toolBeforeCrop = tool;
+            _toolBeforeEraser = tool;
         }
 
         _draft = null;
         _draftPoints = null;
 
-        if (CanvasElement is null || StatusText is null)
-        {
-            return;
-        }
-
         UpdateCanvasCursor();
-        UpdateToolFaceState();
-        CanvasElement.InvalidateVisual();
-        StatusText.Text = ToolStatusText(tool);
+        UpdateToolVisuals();
+        CanvasElement?.InvalidateVisual();
+        if (StatusText is not null)
+        {
+            StatusText.Text = ToolStatusText(tool);
+        }
     }
 
-    private void UpdateToolFaceState()
+    private void UpdateToolVisuals()
     {
-        if (ToolCombo is null)
+        if (_toolButtons.Count == 0)
         {
             return;
         }
 
-        ToolCombo.Tag = _tool is AnnotationTool.Crop or AnnotationTool.Eraser ? "inactive" : "active";
-    }
-
-    private void OnCropButtonChecked(object sender, RoutedEventArgs e)
-    {
-        if (!_initialized || CanvasElement is null)
+        foreach (var (tool, button) in _toolButtons)
         {
-            return;
+            button.IsChecked = tool == _tool;
         }
-
-        if (_tool != AnnotationTool.Crop)
-        {
-            _toolBeforeCrop = EraserButton?.IsChecked == true &&
-                ToolCombo.SelectedItem is EditorToolOption option
-                ? option.Tool
-                : _tool;
-        }
-
-        EndErase();
-        StopPan(releaseCapture: true);
-        _tool = AnnotationTool.Crop;
-        if (EraserButton?.IsChecked == true)
-        {
-            EraserButton.IsChecked = false;
-        }
-
-        _draft = null;
-        _draftPoints = null;
-        UpdateCanvasCursor();
-        UpdateToolFaceState();
-        CanvasElement.InvalidateVisual();
-        StatusText.Text = ToolStatusText(_tool);
-    }
-
-    private void OnCropButtonUnchecked(object sender, RoutedEventArgs e)
-    {
-        if (!_initialized || CanvasElement is null)
-        {
-            return;
-        }
-
-        ClearCropSelection();
-        if (_tool == AnnotationTool.Crop)
-        {
-            _tool = _toolBeforeCrop;
-        }
-
-        UpdateCanvasCursor();
-        UpdateToolFaceState();
-        CanvasElement.InvalidateVisual();
-        StatusText.Text = ToolStatusText(_tool);
     }
 
     private static string ToolStatusText(AnnotationTool tool) => tool switch
@@ -1965,15 +1850,6 @@ public partial class EditorWindow : Window
         catch (Exception exception)
         {
             _logger.LogWarning(exception, "無法儲存編輯器視窗大小。");
-        }
-    }
-
-    private sealed record EditorToolOption(AnnotationTool Tool, string Name, Geometry Icon)
-    {
-        public EditorToolOption(AnnotationTool tool, string name, string icon)
-            : this(tool, name, Geometry.Parse(icon))
-        {
-            Icon.Freeze();
         }
     }
 

@@ -79,6 +79,7 @@ public sealed class CaptureCoordinator
         }
 
         _busy = true;
+        var includeCursor = _state.Settings.CaptureCursor;
         var mainWindow = MainWindow;
         var annotations = AnnotationService;
         var restoreMainWindow = mainWindow?.IsVisible == true;
@@ -127,13 +128,13 @@ public sealed class CaptureCoordinator
                     throw new InvalidOperationException("目前視窗已關閉、最小化或無法擷取。");
                 }
 
-                var image = await CaptureWindowAsync(target, monitors);
+                var image = await CaptureWindowAsync(target, monitors, includeCursor);
                 await HandleCaptureAsync(image, OverlayAction.Copy, CaptureMode.Window, source);
                 restoreMainWindow = false;
                 return;
             }
 
-            var captured = await Task.Run(() => _capture.CaptureVirtualScreen(monitors));
+            var captured = await Task.Run(() => _capture.CaptureVirtualScreen(monitors, includeCursor));
             screen = captured.Bitmap;
             var virtualBounds = captured.Bounds;
 
@@ -220,13 +221,15 @@ public sealed class CaptureCoordinator
 
     private async Task<SKBitmap> CaptureWindowAsync(
         WindowCaptureTarget target,
-        IReadOnlyList<MonitorInfo> monitors)
+        IReadOnlyList<MonitorInfo> monitors,
+        bool includeCursor)
     {
-        if (_windowsGraphicsCapture.IsSupported)
+        var supportsCursorCapture = OperatingSystem.IsWindowsVersionAtLeast(10, 0, 19041);
+        if (_windowsGraphicsCapture.IsSupported && supportsCursorCapture)
         {
             try
             {
-                var image = await _windowsGraphicsCapture.CaptureWindowAsync(target.Handle);
+                var image = await _windowsGraphicsCapture.CaptureWindowAsync(target.Handle, includeCursor);
                 _logger.LogInformation(
                     "使用 Windows.Graphics.Capture 完成視窗擷取：{Width}x{Height}",
                     image.Width,
@@ -244,7 +247,7 @@ public sealed class CaptureCoordinator
             throw new InvalidOperationException("目前視窗已關閉、最小化或無法擷取。");
         }
 
-        return await Task.Run(() => _capture.CaptureScreenRegion(windowBounds, monitors));
+        return await Task.Run(() => _capture.CaptureScreenRegion(windowBounds, monitors, includeCursor));
     }
 
     private PixelRect GetCurrentMonitorBounds(PixelRect virtualBounds, IReadOnlyList<MonitorInfo> monitors)

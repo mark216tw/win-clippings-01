@@ -4,26 +4,28 @@
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F3F4F8" />
     <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="SurfaceAltBrush" Color="#F7F8FB" />
-    <SolidColorBrush x:Key="SidebarBrush" Color="#EAEDF4" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="#DCDFE6" />
     <SolidColorBrush x:Key="BorderBrush" Color="#DCE1EA" />
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#8F939D" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#BBC0C9" />
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#1B1F2A" />
-    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#5F6B7F" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#576274" />
     <SolidColorBrush x:Key="AccentBrush" Color="#2D6BF2" />
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#4A80F5" />
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#1F55C9" />
     <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#FFFFFF" />
     <SolidColorBrush x:Key="PrimaryButtonBrush" Color="#2D6BF2" />
-    <SolidColorBrush x:Key="PrimaryButtonHoverBrush" Color="#4A80F5" />
+    <SolidColorBrush x:Key="PrimaryButtonHoverBrush" Color="#3566D8" />
     <SolidColorBrush x:Key="PrimaryButtonPressedBrush" Color="#1F55C9" />
     <SolidColorBrush x:Key="SelectionBrush" Color="#D9E5FF" />
     <SolidColorBrush x:Key="DangerBrush" Color="#D93B3B" />
-    <SolidColorBrush x:Key="HoverBrush" Color="#E1E6EF" />
+    <SolidColorBrush x:Key="HoverBrush" Color="#D6DCE8" />
     <SolidColorBrush x:Key="ToolbarBrush" Color="#F21E2430" />
     <SolidColorBrush x:Key="ToolbarBorderBrush" Color="#40FFFFFF" />
     <SolidColorBrush x:Key="ToolbarTextBrush" Color="#F7F9FF" />
     <SolidColorBrush x:Key="OverlayDimBrush" Color="#66000000" />
     <SolidColorBrush x:Key="CanvasBackdropBrush" Color="#E6E9F0" />
-    <SolidColorBrush x:Key="FavoriteBrush" Color="#F5A623" />
+    <SolidColorBrush x:Key="FavoriteBrush" Color="#B07000" />
 
 </ResourceDictionary>
-

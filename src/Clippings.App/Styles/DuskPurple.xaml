@@ -6,18 +6,21 @@
     <SolidColorBrush x:Key="SurfaceAltBrush" Color="#33283F" />
     <SolidColorBrush x:Key="SidebarBrush" Color="#15101B" />
     <SolidColorBrush x:Key="BorderBrush" Color="#463852" />
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#74697E" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#54465F" />
     <SolidColorBrush x:Key="TextPrimaryBrush" Color="#F2EDF6" />
     <SolidColorBrush x:Key="TextSecondaryBrush" Color="#B7ABBF" />
     <SolidColorBrush x:Key="AccentBrush" Color="#B9A2D0" />
     <SolidColorBrush x:Key="AccentHoverBrush" Color="#C9B5DB" />
     <SolidColorBrush x:Key="AccentPressedBrush" Color="#9D83B7" />
     <SolidColorBrush x:Key="AccentTextBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="AccentForegroundBrush" Color="#15101B" />
     <SolidColorBrush x:Key="PrimaryButtonBrush" Color="#76558F" />
     <SolidColorBrush x:Key="PrimaryButtonHoverBrush" Color="#8765A1" />
     <SolidColorBrush x:Key="PrimaryButtonPressedBrush" Color="#614675" />
     <SolidColorBrush x:Key="SelectionBrush" Color="#463650" />
     <SolidColorBrush x:Key="DangerBrush" Color="#FF7580" />
-    <SolidColorBrush x:Key="HoverBrush" Color="#392D45" />
+    <SolidColorBrush x:Key="HoverBrush" Color="#40344D" />
     <SolidColorBrush x:Key="ToolbarBrush" Color="#F218121F" />
     <SolidColorBrush x:Key="ToolbarBorderBrush" Color="#33FFFFFF" />
     <SolidColorBrush x:Key="ToolbarTextBrush" Color="#FAF7FC" />

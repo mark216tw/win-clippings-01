@@ -59,16 +59,6 @@
 
                 <Border Width="1" Margin="2,4" Background="#33FFFFFF" />
 
-                <RadioButton x:Name="LaserButton" GroupName="AnnotateTool" Tag="Laser" Style="{StaticResource AnnotateToolToggleStyle}"
-                             Foreground="{DynamicResource ToolbarTextBrush}"
-                             Click="OnToolClick" ToolTip="雷射筆：移動游標顯示漸隱軌跡，不留痕跡（1、L）"
-                             AutomationProperties.Name="雷射筆">
-                    <Viewbox Width="16" Height="16">
-                        <Path Width="16" Height="16" Data="M8,1 L9.6,6.4 L15,8 L9.6,9.6 L8,15 L6.4,9.6 L1,8 L6.4,6.4 Z"
-                              Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
-                    </Viewbox>
-                </RadioButton>
                 <RadioButton x:Name="PenButton" GroupName="AnnotateTool" Tag="Pen" Style="{StaticResource AnnotateToolToggleStyle}"
                              Foreground="{DynamicResource ToolbarTextBrush}"
                              Click="OnToolClick" ToolTip="畫筆（2、P）" AutomationProperties.Name="畫筆">
@@ -128,6 +118,16 @@
                              Click="OnToolClick" ToolTip="橡皮擦：拖曳擦除整筆筆畫（8、E）" AutomationProperties.Name="橡皮擦">
                     <Viewbox Width="16" Height="16">
                         <Path Width="16" Height="16" Data="M3,12.5 L11.5,3.5 L14.5,6.5 L6,15 Z M4.5,15 L14.5,15"
+                              Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
+                    </Viewbox>
+                </RadioButton>
+                <RadioButton x:Name="LaserButton" GroupName="AnnotateTool" Tag="Laser" Style="{StaticResource AnnotateToolToggleStyle}"
+                             Foreground="{DynamicResource ToolbarTextBrush}"
+                             Click="OnToolClick" ToolTip="雷射筆：移動游標顯示漸隱軌跡，不留痕跡（1、L）"
+                             AutomationProperties.Name="雷射筆">
+                    <Viewbox Width="16" Height="16">
+                        <Path Width="16" Height="16" Data="M8,1 L9.6,6.4 L15,8 L9.6,9.6 L8,15 L6.4,9.6 L1,8 L6.4,6.4 Z"
                               Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
                               StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
                     </Viewbox>

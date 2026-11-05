@@ -40,6 +40,8 @@ public sealed class AppSettings
 
     public bool ShowMagnifier { get; set; } = true;
 
+    public bool CaptureCursor { get; set; }
+
     public AnnotationSettings Annotation { get; set; } = new();
 
     public RecordingSettings Recording { get; set; } = new();

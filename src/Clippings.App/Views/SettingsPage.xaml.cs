@@ -107,6 +107,7 @@ public partial class SettingsPage : UserControl
             AutoCopyCheck.IsChecked = settings.AutoCopy;
             CaptureSoundCheck.IsChecked = settings.PlayCaptureSound;
             MagnifierCheck.IsChecked = settings.ShowMagnifier;
+            CaptureCursorCheck.IsChecked = settings.CaptureCursor;
             AnnotateClickThroughCheck.IsChecked = settings.Annotation.ClickThrough;
             AnnotateBackdropCombo.SelectedIndex = (int)settings.Annotation.Backdrop;
             RecordingDirBox.Text = settings.Recording.OutputDirectory;
@@ -454,6 +455,7 @@ public partial class SettingsPage : UserControl
         settings.AutoCopy = AutoCopyCheck.IsChecked == true;
         settings.PlayCaptureSound = CaptureSoundCheck.IsChecked == true;
         settings.ShowMagnifier = MagnifierCheck.IsChecked == true;
+        settings.CaptureCursor = CaptureCursorCheck.IsChecked == true;
         settings.SaveDirectory = SaveDirBox.Text.Trim();
         settings.SaveAutomatically = SaveAutomaticallyCheck.IsChecked == true;
         settings.DefaultFormat = FormatCombo.SelectedIndex == 1 ? ImageFormat.Jpeg : ImageFormat.Png;
@@ -536,6 +538,7 @@ public partial class SettingsPage : UserControl
         AutoCopyCheck.IsChecked == true,
         CaptureSoundCheck.IsChecked == true,
         MagnifierCheck.IsChecked == true,
+        CaptureCursorCheck.IsChecked == true,
         (SaveDirBox.Text ?? string.Empty).Trim(),
         SaveAutomaticallyCheck.IsChecked == true,
         FormatCombo.SelectedIndex == 1 ? ImageFormat.Jpeg : ImageFormat.Png,
@@ -609,6 +612,7 @@ public partial class SettingsPage : UserControl
         bool AutoCopy,
         bool PlayCaptureSound,
         bool ShowMagnifier,
+        bool CaptureCursor,
         string SaveDirectory,
         bool SaveAutomatically,
         ImageFormat DefaultFormat,

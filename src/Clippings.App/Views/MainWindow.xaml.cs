@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -19,6 +20,7 @@ public partial class MainWindow : Window
     private readonly AppState _state;
     private readonly CaptureCoordinator _coordinator;
     private readonly RecordingCoordinator _recording;
+    private readonly ScreenAnnotationService _annotations;
     private readonly DispatcherTimer _recordingTimer;
 
     private HistoryPage? _historyPage;
@@ -32,7 +34,8 @@ public partial class MainWindow : Window
         IServiceProvider services,
         AppState state,
         CaptureCoordinator coordinator,
-        RecordingCoordinator recording)
+        RecordingCoordinator recording,
+        ScreenAnnotationService annotations)
     {
         InitializeComponent();
         WindowSizingHelper.ClampToWorkArea(this);
@@ -41,7 +44,9 @@ public partial class MainWindow : Window
         _state = state;
         _coordinator = coordinator;
         _recording = recording;
+        _annotations = annotations;
         _recording.StateChanged += OnRecordingStateChanged;
+        _annotations.SessionChanged += OnAnnotationSessionChanged;
         _recordingTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, OnRecordingTimerTick, Dispatcher);
         _recordingTimer.Stop();
 
@@ -52,6 +57,7 @@ public partial class MainWindow : Window
             : $"v{informational.Split('+')[0]}";
         RefreshSettingsSummary();
         UpdateRecordingControls();
+        UpdateScreenAnnotationButton();
     }
 
     private void OnSourceInitialized(object? sender, EventArgs e)
@@ -188,6 +194,31 @@ public partial class MainWindow : Window
         };
     }
 
+    private void OnScreenAnnotationClick(object sender, RoutedEventArgs e)
+        => _annotations.Toggle();
+
+    private void OnAnnotationSessionChanged(object? sender, EventArgs e)
+    {
+        if (Dispatcher.CheckAccess())
+        {
+            UpdateScreenAnnotationButton();
+        }
+        else
+        {
+            _ = Dispatcher.BeginInvoke(UpdateScreenAnnotationButton);
+        }
+    }
+
+    private void UpdateScreenAnnotationButton()
+    {
+        var active = _annotations.IsActive;
+        ScreenAnnotationButton.Content = active ? AppStrings.StopScreenAnnotation : AppStrings.ScreenAnnotation;
+        ScreenAnnotationButton.ToolTip = active ? AppStrings.StopScreenAnnotationToolTip : AppStrings.ScreenAnnotationToolTip;
+        AutomationProperties.SetName(
+            ScreenAnnotationButton,
+            active ? AppStrings.StopScreenAnnotation : AppStrings.ScreenAnnotation);
+    }
+
     private void OnSelectWindowRecordingClick(object sender, RoutedEventArgs e)
         => _ = _recording.StartWithSelectionAsync();
 
@@ -274,7 +305,6 @@ public partial class MainWindow : Window
     public void RefreshSettingsSummary()
     {
         var settings = _state.Settings;
-        HotkeyHint.Text = $"區域 {settings.HotkeyRegion}\n全螢幕 {settings.HotkeyFullScreen}\n視窗 {settings.HotkeyWindow}\n延遲 {settings.HotkeyDelayed}";
 
         RegionCaptureButton.ToolTip = $"{AppStrings.CaptureRegion} ({settings.HotkeyRegion})";
         FullScreenCaptureButton.ToolTip = $"{AppStrings.CaptureFullScreen} ({settings.HotkeyFullScreen})";
@@ -324,6 +354,7 @@ public partial class MainWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         _recording.StateChanged -= OnRecordingStateChanged;
+        _annotations.SessionChanged -= OnAnnotationSessionChanged;
         _recordingTimer.Stop();
         _settingsPage?.StopHotkeyRecording();
         _historyPage = null;

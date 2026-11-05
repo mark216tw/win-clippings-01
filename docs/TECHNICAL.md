@@ -120,6 +120,7 @@ tests/
 - 指定螢幕。
 - 任意矩形（會先與虛擬桌面範圍交集）。
 - 視窗可見邊界。
+- 若 `CaptureCursor` 啟用，會在 `BitBlt` 後、Alpha 設定前，以 `GetCursorInfo`／`GetIconInfo`／`DrawIconEx` 將目前游標繪入記憶體 DC；支援 hotspot、隱藏游標與超出擷取範圍時略過。
 
 `WindowsGraphicsCaptureService` 提供目前視窗的優先擷取來源：
 
@@ -242,7 +243,8 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 只有主視窗可見或螢幕標註進行中時，才隱藏並等待 180 ms 讓畫面穩定。
 - 延遲模式先顯示倒數視窗，再轉為區域框選。
 - 區域框選會為每個螢幕建立 `CaptureOverlayWindow`，並將虛擬桌面影像裁切成各螢幕影像。
-- 目前視窗在能力可用時優先走 `WindowsGraphicsCaptureService`，失敗時退回 `ScreenCaptureService`。
+- 目前視窗在能力可用時優先走 `WindowsGraphicsCaptureService`，失敗時退回 `ScreenCaptureService`；Windows 10 2004 以上以 `IsCursorCaptureEnabled` 控制游標，較舊系統（19041 以下）一律改用 GDI 備援以確保游標設定一致。
+- `MainWindow` 注入 `ScreenAnnotationService`，側欄「螢幕標註」按鈕呼叫 `Toggle()`，並訂閱 `SessionChanged` 同步「螢幕標註」／「結束標註」文字與 ToolTip。
 - 完成後先依動作與設定複製到剪貼簿，再編碼 PNG 與縮圖、計算 SHA-256、寫入歷史、執行保留策略。
 - 最後依動作與設定執行另存、自動存檔與開啟編輯器。
 - `CaptureInvocationSource`：`UserInterface`、`GlobalHotkey`、`CommandLine`。
@@ -282,12 +284,12 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 `EditorWindow`：
 
 - 以 `SKElement` 繪製目前影像與標註。
-- 工具選項包含平移、畫筆、螢光筆、文字、編號、直線、箭頭、矩形、橢圓、馬賽克；工具選單右側另有橡皮擦切換鈕，裁切、右轉、左轉、垂直翻轉、水平翻轉為獨立按鈕。工具選單為 SplitButton 行為（`ToolSelectorStyle`／`ToolSelectorItemStyle`）：點擊名稱區直接套用工具、點擊箭頭展開選單；使用中狀態經 `Tag="active"` 觸發器以強調色填色，選單選取項顯示勾勾。
-- 橡皮擦沿用 `StrokeHitTester` 整筆擦除，一次拖曳合併為單一復原步驟；容許誤差為 `Math.Max(8f, 線寬 * 2f)`。橡皮擦為獨立切換鈕，關閉時回到工具選單目前選取的工具。
-- 每次開啟固定以平移起始，不記住上次使用的工具。
+- 工具列為分段式設計（`EditorToolGroupStyle`／`EditorToolButtonStyle`），依移動、標註、形狀、筆刷、編輯分組；工具本身為同一 `GroupName` 的 `RadioButton`，使用中狀態以強調色填色。工具列使用 `WrapPanel`，視窗變窄時以群組為單位換行；橡皮擦、裁切、右轉、左轉、垂直翻轉、水平翻轉都位於工具列中。
+- 橡皮擦沿用 `StrokeHitTester` 整筆擦除，一次拖曳合併為單一復原步驟；容許誤差為 `Math.Max(8f, 線寬 * 2f)`。再次點擊使用中的橡皮擦或裁切，會回到切換前的工具。
+- 每次開啟固定以平移起始、圖片以 80% 置中顯示，不記住上次使用的工具；復原、重做與符合視窗為純圖示按鈕。
 - 平移游標預設為一般箭頭，按下按鍵開始平移時顯示四向移動游標，放開後還原。
 - 標註以 `Annotation` 清單保存，繪製時才合成。
-- 復原／重做使用 `UndoStack<EditorSnapshot>`，快照包含影像與標註，容量 50。
+- 復原／重做使用 `UndoStack<EditorSnapshot>`，快照包含影像與標註，容量 50。還原時比較目前影像與快照影像是否為同一物件：相同代表只還原標註，保留目前縮放與位移；不同代表裁切或旋轉，重新 `FitCanvas`。
 - 裁切採「先預覽、確認後才套用」，可取消；框選範圍時「複製」只輸出選取範圍（合成後以 `ImageCodec.Crop` 裁出，非破壞性）。
 - 旋轉／翻轉立即套用；套用前若有標註會先合併進影像（透明度保留），單一復原步驟即可回到變形前。
 - 文字輸入以覆蓋的 `TextBox` 實作，`Enter` 換行、`Ctrl+Enter` 完成、`Esc` 取消。
@@ -314,6 +316,7 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - `System` 會讀取 `HKCU\...\Themes\Personalize\AppsUseLightTheme`。
 - 套用主題時同步更新所有視窗的 DWM 深色標題列。
 - 共用樣式集中於 `Styles/Controls.xaml`，顏色與筆刷使用 `DynamicResource`。
+- 對比度 token：`ControlBorderBrush`（控制項邊界 ≥ 3:1）、`CardBorderBrush`（卡片與側欄分隔）、`AccentForegroundBrush`（Accent 填色上的文字／圖示）。淺色主題的 `TextSecondaryBrush` 與 Primary hover 也已調整至 WCAG AA。
 
 ### 5.9 日誌與例外
 
