@@ -294,7 +294,38 @@ public partial class EditorWindow : Window
         CanvasElement.InvalidateVisual();
     }
 
-    private void UpdateZoomText() => ZoomText.Text = $"{_zoom * 100:0}%";
+    private void UpdateZoomText()
+    {
+        ZoomText.Text = $"{_zoom * 100:0}%";
+        ZoomText.ToolTip = string.Format(CultureInfo.CurrentCulture, AppStrings.PixelZoomToolTipFormat,
+            _zoom * 100, _zoom * VisualTreeHelper.GetDpi(CanvasElement).DpiScaleX * 100);
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        if (!_initialized)
+        {
+            return;
+        }
+
+        UpdateZoomText();
+        CanvasElement.InvalidateVisual();
+    }
+
+    private void OnActualPixelsClick(object sender, RoutedEventArgs e)
+    {
+        var dpi = VisualTreeHelper.GetDpi(CanvasElement);
+        _zoom = (float)(1.0 / dpi.DpiScaleX);
+        // Align the image origin to display pixels, avoiding fractional-pixel translation at 1:1.
+        _offset = new SKPoint(
+            (float)(Math.Round((CanvasElement.ActualWidth - Bitmap.Width * _zoom) * dpi.DpiScaleX / 2) / dpi.DpiScaleX),
+            (float)(Math.Round((CanvasElement.ActualHeight - Bitmap.Height * _zoom) * dpi.DpiScaleY / 2) / dpi.DpiScaleY));
+        _initialZoomApplied = true;
+        UpdateZoomText();
+        UpdateOverlayLayout();
+        CanvasElement.InvalidateVisual();
+    }
 
     private void UpdateStatus()
     {
@@ -307,11 +338,15 @@ public partial class EditorWindow : Window
         var canvas = e.Surface.Canvas;
         canvas.Clear(SKColors.Transparent);
 
-        var sampling = _zoom >= 1
+        var dpi = VisualTreeHelper.GetDpi(CanvasElement);
+        var pixelZoom = _zoom * dpi.DpiScaleX;
+        var sampling = pixelZoom >= 1 - 0.0001
             ? new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None)
             : new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear);
 
         canvas.Save();
+        // Keep input and WPF overlays in DIP; only the Skia rendering surface uses display pixels.
+        canvas.Scale((float)dpi.DpiScaleX, (float)dpi.DpiScaleY);
         canvas.Translate(_offset.X, _offset.Y);
         canvas.Scale(_zoom);
         canvas.DrawBitmap(Bitmap, 0, 0, sampling);

@@ -43,6 +43,9 @@ public static class AppStrings
     public const string ActionUndo = "復原";
     public const string ActionRedo = "重做";
     public const string ActionFitWindow = "符合視窗";
+    public const string ActionActualPixels = "1:1";
+    public const string ActualPixelsToolTip = "原始像素 100%（圖片 1 像素對應螢幕 1 像素）";
+    public const string PixelZoomToolTipFormat = "邏輯縮放：{0:0}%｜實際像素縮放：{1:0}%";
     public const string UndoToolTip = "復原 (Ctrl+Z)";
     public const string RedoToolTip = "重做 (Ctrl+Y)";
     public const string FitWindowToolTip = "縮放至符合視窗 (Ctrl+0)";

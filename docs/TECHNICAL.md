@@ -287,6 +287,7 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 工具列為分段式設計（`EditorToolGroupStyle`／`EditorToolButtonStyle`），依移動、標註、形狀、筆刷、編輯分組；工具本身為同一 `GroupName` 的 `RadioButton`，使用中狀態以強調色填色。工具列使用 `WrapPanel`，視窗變窄時以群組為單位換行；橡皮擦、裁切、右轉、左轉、垂直翻轉、水平翻轉都位於工具列中。
 - 橡皮擦沿用 `StrokeHitTester` 整筆擦除，一次拖曳合併為單一復原步驟；容許誤差為 `Math.Max(8f, 線寬 * 2f)`。再次點擊使用中的橡皮擦或裁切，會回到切換前的工具。
 - 每次開啟固定以平移起始、圖片以 80% 置中顯示，不記住上次使用的工具；復原、重做與符合視窗為純圖示按鈕。
+- 編輯器 `SKElement.IgnorePixelScaling=False`，於 PaintSurface 明確套用螢幕 DPI，再套用 DIP 平移與邏輯縮放；輸入／文字／裁切覆蓋層維持 DIP。取樣依 `_zoom × DpiScaleX` 判斷，實際比例 ≥ 1 使用 nearest，縮小使用 linear。「1:1」設定 `_zoom=1/DpiScaleX` 並將置中原點對齊實體像素；比例文字仍表示邏輯縮放，ToolTip 顯示實際像素縮放。
 - 平移游標預設為一般箭頭，按下按鍵開始平移時顯示四向移動游標，放開後還原。
 - 標註以 `Annotation` 清單保存，繪製時才合成。
 - 復原／重做使用 `UndoStack<EditorSnapshot>`，快照包含影像與標註，容量 50。還原時比較目前影像與快照影像是否為同一物件：相同代表只還原標註，保留目前縮放與位移；不同代表裁切或旋轉，重新 `FitCanvas`。

@@ -1,3 +1,25 @@
+# Clippings 剪貼簿 1.24.2
+
+## 編輯器高 DPI 預覽
+
+- 改善高 DPI 螢幕的圖片取樣判斷，開啟時仍維持 80% 置中顯示。
+- 編輯器右下角新增「1:1」按鈕，以圖片 1 像素對應螢幕 1 像素檢查原始清晰度。
+- 將滑鼠停在縮放比例上，可查看邏輯縮放與實際像素縮放；高 DPI 螢幕下兩者可能不同。
+
+### 下載
+
+- `win-x64`：適用 Intel／AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+此版本為 framework-dependent，需安裝對應架構的 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。解壓縮 ZIP 後執行 `Clippings.exe`。
+
+### SHA-256
+
+- `Clippings-1.24.2-win-x64-framework-dependent.zip`：`C2400E7FEB65352167F961369A53163F4A2B9B6BFF86CAFC07824E8046F0B03D`
+- `Clippings-1.24.2-win-arm64-framework-dependent.zip`：`7B36303F6FE4474CFA7D7CC4DAB73CA7529BE89EBDF0B476BC752AC661A3D452`
+
+---
+
 # Clippings 剪貼簿 1.24.1
 
 ## 螢幕標註工具列順序

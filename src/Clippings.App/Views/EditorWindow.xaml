@@ -399,7 +399,7 @@
         <Border Grid.Row="1" Background="{DynamicResource CanvasBackdropBrush}" ClipToBounds="True">
             <Grid x:Name="CanvasHost">
                 <skia:SKElement x:Name="CanvasElement"
-                                IgnorePixelScaling="True"
+                                IgnorePixelScaling="False"
                                 PaintSurface="OnPaintSurface"
                                 MouseWheel="OnCanvasMouseWheel"
                                  MouseDown="OnCanvasMouseDown"
@@ -442,6 +442,10 @@
                 BorderThickness="0,1,0,0"
                 Padding="14,6">
             <DockPanel>
+                <Button DockPanel.Dock="Right" Content="{x:Static strings:AppStrings.ActionActualPixels}"
+                        Style="{StaticResource EditorActionButtonStyle}" Click="OnActualPixelsClick"
+                        ToolTip="{x:Static strings:AppStrings.ActualPixelsToolTip}"
+                        AutomationProperties.Name="{x:Static strings:AppStrings.ActualPixelsToolTip}" />
                 <TextBlock x:Name="ZoomText" DockPanel.Dock="Right"
                            Style="{StaticResource CaptionStyle}" VerticalAlignment="Center" Margin="12,0,0,0" />
                 <TextBlock x:Name="ImageSizeText" DockPanel.Dock="Right"

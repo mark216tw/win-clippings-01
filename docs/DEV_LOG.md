@@ -4,6 +4,41 @@
 
 ---
 
+## 2026-11-06 - v1.24.2
+
+### 目標
+
+改善編輯器高 DPI 預覽與像素檢視，保留開啟時 80% 置中顯示。
+
+### 變更
+
+- 以實體像素畫布搭配明確 DPI 轉換繪製；依實際像素縮放選擇取樣。
+- 新增原始像素 1:1 操作，沿用 DIP 滑鼠與覆蓋層座標。
+- `Directory.Build.props`：版本升至 1.24.2；同步更新變更紀錄、版本說明、README、使用指南與技術文件。
+
+### 問題與解法
+
+- 原取樣僅比較邏輯 `_zoom`，未計入螢幕 DPI；高 DPI 上即使實際已放大仍使用線性取樣。
+- 核對 SkiaSharp 實作後，`IgnorePixelScaling=True` 不足以證明先低解析度繪製再放大；改為明確指定實體畫布與 DPI 轉換，避免依賴隱含縮放。
+- 一般 `dotnet build -c Debug` 遇到執行中的 Clippings（PID 33884）鎖住輸出 DLL（MSB3027／MSB3021）；改用 `--artifacts-path` 指定暫存獨立目錄，Debug 建置成功，0 警告／0 錯誤。
+- 同一獨立輸出目錄執行 `dotnet test -c Debug --no-build --artifacts-path ...`：106 項通過；`git diff --check` 通過。
+- 依使用者要求重新執行 `dotnet build -c Debug`：原輸出目錄已解除鎖定，建置成功，0 警告／0 錯誤。
+
+### 發佈
+
+- 依使用者要求準備 GitHub 提交與 v1.24.2 Release，沿用 x64／ARM64 framework-dependent 發佈，關閉 ReadyToRun，ZIP 排除 PDB。
+- x64／ARM64 `dotnet publish -c Release` 皆成功；`dotnet format Clippings.sln --verify-no-changes --no-restore` 通過。
+- 資產：`Clippings-1.24.2-win-x64-framework-dependent.zip`、`Clippings-1.24.2-win-arm64-framework-dependent.zip`。
+- SHA-256：x64 `C2400E7FEB65352167F961369A53163F4A2B9B6BFF86CAFC07824E8046F0B03D`；ARM64 `7B36303F6FE4474CFA7D7CC4DAB73CA7529BE89EBDF0B476BC752AC661A3D452`。
+- Release 目標：<https://github.com/mark216tw/win-clippings-01/releases/tag/v1.24.2>。
+
+### 待辦
+
+- 100%／125%／150% 與跨螢幕、標註／裁切互動需實機驗證；跨 DPI 後需再按「1:1」套用新螢幕的原始像素檢視。
+- ARM64 資產尚未實機啟動驗證。
+
+---
+
 ## 2026-11-05 - v1.24.1
 
 ### 目標
