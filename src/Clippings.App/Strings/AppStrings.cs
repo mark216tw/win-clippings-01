@@ -59,7 +59,7 @@ public static class AppStrings
     public const string SaveAsToolTip = "另存新檔為圖檔 (Ctrl+Shift+S)";
     public const string SaveToLibraryToolTip = "儲存編輯結果到最近擷取並關閉編輯器 (Ctrl+S)";
     public const string ActionDiscard = "捨棄";
-    public const string DiscardToolTip = "刪除這張新擷圖並關閉編輯器（不儲存編輯結果）";
+    public const string DiscardToolTip = "刪除這張新擷圖、關閉編輯器並回到最近擷取（不儲存編輯結果）";
     public const string ActionClose = "關閉";
     public const string CloseEditorToolTip = "關閉編輯器，不儲存未儲存的編輯結果（與視窗右上角 X 相同）";
     public const string ActionCancel = "取消";

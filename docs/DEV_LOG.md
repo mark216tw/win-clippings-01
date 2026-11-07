@@ -4,6 +4,60 @@
 
 ---
 
+## 2026-11-07 - v1.24.3
+
+### 目標
+
+讓主視窗與系統匣的快速擷取完成後直接開啟編輯器，與全域快捷鍵流程一致；區域框選操作列簡化為「確定／取消」。
+
+### 變更
+
+- `Services/CaptureCoordinator.cs`：`CaptureInvocationSource` 新增 `QuickCapture`；`HandleCaptureAsync` 在 `GlobalHotkey` 或 `QuickCapture` 來源時開啟編輯器，音效仍僅限 `GlobalHotkey`。
+- `Views/MainWindow.xaml.cs`：側欄五個快速擷取入口改傳 `QuickCapture`。
+- `App.xaml.cs`：系統匣五個快速擷取選單項目改傳 `QuickCapture`。
+- `Views/CaptureOverlayWindow.xaml`：操作列移除「複製」「儲存」，原「編輯」改為「確定」；提示文字同步更新。
+- `Views/CaptureOverlayWindow.xaml.cs`：`Enter`／`Ctrl+E` 觸發確定（沿用原「編輯」語意），移除 `Ctrl+C`／`Ctrl+S` 與對應按鈕事件。
+- `Directory.Build.props`：版本升至 1.24.3；同步更新 CHANGELOG、RELEASE_NOTES、README、使用指南、技術文件與架構文件。
+
+### 問題與解法
+
+- 主視窗與系統匣原本使用 `UserInterface` 來源，僅區域框選按「編輯」才會開編輯器；改以獨立 `QuickCapture` 來源區分，避免影響螢幕標註工具列「截圖」（仍僅複製、不開編輯器）與 CLI 流程。
+- 為避免快速擷取誤播音效，未直接重用 `GlobalHotkey` 來源；設定頁文案仍為「使用快捷鍵擷取完成時播放音效」。
+
+### 驗證
+
+- `dotnet build Clippings.sln -c Debug`：0 警告、0 錯誤。
+- `dotnet test Clippings.sln -c Debug --no-build`：106 項通過。
+- `dotnet format Clippings.sln --verify-no-changes --no-restore`：通過。
+
+### 追加修正：目前視窗擷取
+
+- 問題：系統匣右鍵「目前視窗」抓到 293×243 的系統匣溢出視窗；主視窗按鈕隨後出現「找不到可擷取的目前視窗」。
+- 根因：`IsCapturableWindow` 未排除 Windows 11 的 `TopLevelWindowForOverflowXamlIsland`；該視窗被 `ForegroundWindowTracker` 記住，關閉後 `_lastTarget` 失效即直接失敗。
+- 變更：`WindowHelper` 擴充 shell 視窗黑名單（系統匣溢出、工作檢視、桌面等），新增 `TryFindCapturableWindow` 以 `EnumWindows` Z-order 備援，並略過 tool window、無標題與過小視窗；`ForegroundWindowTracker` 在最近目標失效時改用備援；`CaptureCoordinator` 的無目標訊息改為較明確的提示。
+- 驗證：`dotnet build Clippings.sln -c Debug` 成功，0 警告、0 錯誤；以暫存主控台程式直接呼叫 `WindowHelper.TryFindCapturableWindow`，正確跳過 `ThumbnailDeviceHelperWnd` 與陰影視窗，選到最上層的 Brave 視窗。
+
+### 追加調整：捨棄後回到主畫面
+
+- 問題：快速擷取後主視窗會先隱藏，編輯器按「捨棄」只刪除擷取並關閉，主視窗不會回來。
+- 變更：`EditorWindow.DiscardAndCloseAsync` 成功後改呼叫既有的 `CloseAndRevealRecentCaptures(_canDiscard)`，與「儲存」流程一致，顯示主視窗並切到最近擷取頁；`DiscardToolTip` 同步更新。
+- 驗證：`dotnet build Clippings.sln -c Debug` 成功，0 警告、0 錯誤；`dotnet test Clippings.sln -c Debug --no-build` 106 項通過；`dotnet format Clippings.sln --verify-no-changes --no-restore` 通過。
+
+### 待辦
+
+- 需實機確認主視窗、系統匣各五種快速擷取皆會開啟編輯器，且 CLI 行為不變。
+- 需實機確認主視窗與系統匣「目前視窗」能擷取前一個外部應用程式，且不再抓到系統匣溢出視窗。
+- 需實機確認新擷取按「捨棄」後會回到主視窗最近擷取頁，且按 X 仍只關閉編輯器。
+
+### 發佈
+
+- 依使用者要求以 mark216tw <mark216tw@gmail.com> 提交，建立 v1.24.3 GitHub Release，並刪除全部舊版 Releases 與 tags。
+- 資產：`Clippings-1.24.3-win-x64-framework-dependent.zip`、`Clippings-1.24.3-win-arm64-framework-dependent.zip`。
+- SHA-256：x64 `2FD9629BED80B9ED991C435D5AACB40165229759EC0763DA51F690E578F54541`；ARM64 `5D98BA90E2767FAA11507A101E880EC2DE4F2C224F821FBCBAA97B7E8BA82774`。
+- Release 目標：<https://github.com/mark216tw/win-clippings-01/releases/tag/v1.24.3>。
+
+---
+
 ## 2026-11-06 - v1.24.2
 
 ### 目標

@@ -1577,7 +1577,7 @@ public partial class EditorWindow : Window
         }
 
         SetBusy(false);
-        Close();
+        CloseAndRevealRecentCaptures(_canDiscard);
     }
 
     private void OnSaveAsClick(object sender, RoutedEventArgs e) => _ = SaveToFileAsync();

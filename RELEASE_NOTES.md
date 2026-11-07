@@ -1,3 +1,27 @@
+# Clippings 剪貼簿 1.24.3
+
+## 快速擷取直接開啟編輯器
+
+- 主視窗側欄與系統匣的快速擷取（全螢幕、目前螢幕、目前視窗、延遲、區域）完成後會直接開啟編輯器，與全域快捷鍵一致。
+- 區域框選操作列簡化為「確定」與「取消」；`Enter` 或 `Ctrl+E` 確定、`Esc` 取消。
+- 主視窗與系統匣快速擷取不播放提示音；全域快捷鍵仍依設定播放。
+- 新擷取在編輯器按「捨棄」後會刪除該筆擷取並回到主視窗最近擷取頁，與儲存後行為一致。
+- 修正「目前視窗」抓到系統匣溢出視窗或顯示找不到視窗的問題；現在會略過系統匣、桌面等 shell 視窗，並改抓 Clippings 後面最上層的可擷取視窗。
+
+### 下載
+
+- `win-x64`：適用 Intel、AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+本版為 framework-dependent，需安裝對應架構的 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。解壓縮 ZIP 後直接執行 `Clippings.exe`。
+
+### SHA-256
+
+- `Clippings-1.24.3-win-x64-framework-dependent.zip`：`2FD9629BED80B9ED991C435D5AACB40165229759EC0763DA51F690E578F54541`
+- `Clippings-1.24.3-win-arm64-framework-dependent.zip`：`5D98BA90E2767FAA11507A101E880EC2DE4F2C224F821FBCBAA97B7E8BA82774`
+
+---
+
 # Clippings 剪貼簿 1.24.2
 
 ## 編輯器高 DPI 預覽

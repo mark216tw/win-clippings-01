@@ -30,18 +30,35 @@ public sealed class ForegroundWindowTracker : IDisposable
             return true;
         }
 
+        bool hasLastTarget;
+        WindowCaptureTarget lastTarget;
         lock (_sync)
         {
-            if (!_hasLastTarget || !WindowHelper.TryGetVisibleWindowBounds(_lastTarget, out _))
-            {
-                target = default;
-                _hasLastTarget = false;
-                return false;
-            }
+            hasLastTarget = _hasLastTarget;
+            lastTarget = _lastTarget;
+        }
 
-            target = _lastTarget;
+        if (hasLastTarget && WindowHelper.TryGetVisibleWindowBounds(lastTarget, out _))
+        {
+            target = lastTarget;
             return true;
         }
+
+        if (hasLastTarget)
+        {
+            lock (_sync)
+            {
+                _hasLastTarget = false;
+            }
+        }
+
+        if (WindowHelper.TryFindCapturableWindow(out target))
+        {
+            Remember(target);
+            return true;
+        }
+
+        return false;
     }
 
     public void Dispose()

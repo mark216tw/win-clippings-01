@@ -161,8 +161,8 @@ tests/
 ### 4.4 前景視窗
 
 - `ForegroundWindowTracker` 註冊 `SetWinEventHook(EVENT_SYSTEM_FOREGROUND)`，並忽略本行程事件。
-- 觸發視窗擷取時優先取得目前前景視窗；若失敗則回退到最近記住的可見視窗。
-- `WindowHelper` 使用 DWM 擴充框與可見性檢查，排除最小化、隱藏或被遮擋的目標。
+- 觸發視窗擷取時優先取得目前前景視窗；若失敗則回退到最近記住的可見視窗；最近目標失效時再以 `EnumWindows` 依 Z-order 尋找 Clippings 後面最上層的可擷取視窗（略過 tool window、無標題與過小視窗）。
+- `WindowHelper` 使用 DWM 擴充框與可見性檢查，排除最小化、隱藏、cloaked 的目標，以及系統匣、系統匣溢出、桌面、工作檢視等 shell 視窗（例如 `TopLevelWindowForOverflowXamlIsland`、`NotifyIconOverflowWindow`）。
 
 ### 4.5 影像處理
 
@@ -247,8 +247,8 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - `MainWindow` 注入 `ScreenAnnotationService`，側欄「螢幕標註」按鈕呼叫 `Toggle()`，並訂閱 `SessionChanged` 同步「螢幕標註」／「結束標註」文字與 ToolTip。
 - 完成後先依動作與設定複製到剪貼簿，再編碼 PNG 與縮圖、計算 SHA-256、寫入歷史、執行保留策略。
 - 最後依動作與設定執行另存、自動存檔與開啟編輯器。
-- `CaptureInvocationSource`：`UserInterface`、`GlobalHotkey`、`CommandLine`。
-- 只有 `GlobalHotkey` 會播放提示音；只有 `GlobalHotkey` 或使用者選擇「編輯」才會自動開啟編輯器。
+- `CaptureInvocationSource`：`UserInterface`、`GlobalHotkey`、`CommandLine`、`QuickCapture`。
+- 只有 `GlobalHotkey` 會播放提示音；`GlobalHotkey`、`QuickCapture` 或使用者於框選按「確定」時會開啟編輯器。
 
 ### 5.3 RecordingCoordinator
 
@@ -297,7 +297,7 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 馬賽克以區塊平均色繪製，並使用快取避免重複計算。
 - 輸出時合成為 `SKBitmap`，再交由 `ImageCodec` 編碼；複製與另存新檔一律包含註解（複製整張與框選複製皆先合成再輸出）。「另存新檔」僅匯出圖檔，不清除變更狀態。
 - 「儲存」按鈕呼叫 `SaveToLibraryAndCloseAsync`，於背景合成後以 `UpdateCaptureImageAsync` 覆蓋原始擷取項目（原項目不在時退回 `AddCaptureAsync` 新增一筆）；成功後刷新歷史庫並關閉，失敗顯示錯誤並留在編輯器。沒有變更且原項目已存在時直接關閉，不更新時間與排序。若編輯器是從新擷圖開啟（`canDiscard` 為 `true`），儲存成功後會呼叫 `App.ShowRecentCaptures()` 顯示主視窗並切到最近擷取頁；從最近擷取重新編輯時則維持原本的刷新行為。
-- 「關閉」與視窗 X 直接關閉，不儲存編輯；新擷取的「捨棄」會先刪除該筆紀錄與圖檔再關閉。關閉事件不再自動存回。
+- 「關閉」與視窗 X 直接關閉，不儲存編輯；新擷取的「捨棄」會先刪除該筆紀錄與圖檔，成功後同樣呼叫 `App.ShowRecentCaptures()` 回到最近擷取頁。關閉事件不再自動存回。
 - 鍵盤：`Ctrl+Z`／`Ctrl+Y`／`Ctrl+C`／`Ctrl+S`（儲存）、`Ctrl+Shift+S`（另存新檔）、`Ctrl++`／`Ctrl+-` 縮放、`Ctrl+0` 符合視窗、`Esc` 關閉或取消裁切、`Enter` 確認裁切。
 
 ### 5.7 框選覆蓋層
@@ -307,8 +307,8 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 每個螢幕一個無邊框、透明、Topmost 視窗。
 - 顯示凍結的螢幕影像，支援拖曳建立選取區、移動、八方向調整大小；按住 `Shift` 拖曳固定正方形，方向鍵可微調選取區。
 - 放大鏡顯示座標、RGB 與目前顏色。
-- 操作列提供複製、編輯、儲存、取消。
-- 鍵盤：`Enter`／`Ctrl+C` 複製、`Ctrl+E` 編輯、`Ctrl+S` 儲存、`Esc` 取消。
+- 操作列提供確定、取消。
+- 鍵盤：`Enter`／`Ctrl+E` 確定、`Esc` 取消。
 - 完成時回傳 `OverlayResult`（影像、`PixelRect`、`OverlayAction`）。
 
 ### 5.8 主題與樣式

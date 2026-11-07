@@ -56,8 +56,8 @@ dotnet format Clippings.sln --verify-no-changes --no-restore
 
 | 平台 | 特性 | 需求 | 約略大小 |
 | --- | --- | --- | ---: |
-| x64 | framework-dependent，關閉 ReadyToRun | .NET 10 Desktop Runtime（x64） | 18 MB |
-| ARM64 | framework-dependent，關閉 ReadyToRun | .NET 10 Desktop Runtime（ARM64） | 18 MB |
+| x64 | framework-dependent，關閉 ReadyToRun | .NET 10 Desktop Runtime（x64） | 17.5 MB |
+| ARM64 | framework-dependent，關閉 ReadyToRun | .NET 10 Desktop Runtime（ARM64） | 16.7 MB |
 
 僅在明確需要發佈時執行 Release。
 

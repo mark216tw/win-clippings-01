@@ -23,7 +23,7 @@ Clippings 是一個 Windows 單機桌面應用程式，提供：
 | 目標 | 說明 |
 | --- | --- |
 | 快速 | 從按下快捷鍵到可框選的時間要短，不打斷原本工作流程 |
-| 直覺 | 框選、複製、編輯、儲存都在同一個畫面完成 |
+| 直覺 | 框選後直接進入編輯器，複製與儲存設定集中處理 |
 | 可靠 | 擷取失敗要有提示，資料寫入失敗不能讓程式崩潰 |
 | 隱私 | 所有資料留在本機，無網路功能 |
 | 可攜 | 免安裝、self-contained，資料集中在單一資料夾 |
@@ -66,7 +66,7 @@ Clippings 是一個 Windows 單機桌面應用程式，提供：
 | FR-02 | 快捷鍵可在設定頁修改並即時重新註冊 | `SettingsPage`、`App.ApplyHotkeys` |
 | FR-03 | 區域擷取需先凍結畫面，支援移動與調整選取範圍 | `CaptureOverlayWindow` |
 | FR-04 | 框選時顯示放大鏡、座標、RGB 與尺寸 | `CaptureOverlayWindow` |
-| FR-05 | 提供複製、編輯、儲存、取消四種完成動作 | `OverlayAction` |
+| FR-05 | 提供確定、取消兩種框選完成動作 | `OverlayAction` |
 | FR-06 | 編輯器支援多種標註工具、16 色與線寬 | `EditorWindow`、`Annotation` |
 | FR-07 | 編輯器支援復原、重做、可取消的裁切與旋轉／翻轉 | `UndoStack`、`EditorSnapshot`、`ImageCodec` |
 | FR-08 | 擷取結果寫入歷史庫並可搜尋、收藏、刪除 | `ClippingsStore`、`HistoryPage` |

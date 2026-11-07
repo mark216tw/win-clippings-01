@@ -186,11 +186,11 @@ public partial class MainWindow : Window
     {
         _ = ((sender as FrameworkElement)?.Tag as string) switch
         {
-            "FullScreen" => _coordinator.CaptureFullScreenAsync(),
-            "Monitor" => _coordinator.CaptureMonitorAsync(),
-            "Window" => _coordinator.CaptureWindowAsync(),
-            "Delayed" => _coordinator.CaptureDelayedAsync(),
-            _ => _coordinator.CaptureRegionAsync(),
+            "FullScreen" => _coordinator.CaptureFullScreenAsync(CaptureInvocationSource.QuickCapture),
+            "Monitor" => _coordinator.CaptureMonitorAsync(CaptureInvocationSource.QuickCapture),
+            "Window" => _coordinator.CaptureWindowAsync(CaptureInvocationSource.QuickCapture),
+            "Delayed" => _coordinator.CaptureDelayedAsync(CaptureInvocationSource.QuickCapture),
+            _ => _coordinator.CaptureRegionAsync(CaptureInvocationSource.QuickCapture),
         };
     }
 

@@ -137,6 +137,41 @@ public static class WindowHelper
     public static bool TryGetForegroundCaptureTarget(out WindowCaptureTarget target)
         => TryCreateCaptureTarget(NativeMethods.GetForegroundWindow(), out target);
 
+    public static bool TryFindCapturableWindow(out WindowCaptureTarget target)
+    {
+        var result = default(WindowCaptureTarget);
+        var found = false;
+
+        _ = NativeMethods.EnumWindows((handle, _data) =>
+        {
+            if (!TryCreateCaptureTarget(handle, out var candidate))
+            {
+                return true;
+            }
+
+            if (!TryGetVisibleWindowBounds(candidate, out var bounds) ||
+                bounds.Width < 64 ||
+                bounds.Height < 64 ||
+                NativeMethods.GetWindowTextLength(candidate.Handle) <= 0)
+            {
+                return true;
+            }
+
+            var exStyle = NativeMethods.GetWindowLongPtr(candidate.Handle, NativeMethods.GwlExStyle).ToInt64();
+            if ((exStyle & NativeMethods.WsExToolWindow) != 0)
+            {
+                return true;
+            }
+
+            result = candidate;
+            found = true;
+            return false;
+        }, IntPtr.Zero);
+
+        target = result;
+        return found;
+    }
+
     public static bool TryActivateWindow(WindowCaptureTarget target, bool restoreIfMinimized = false)
     {
         if (target.Handle == IntPtr.Zero || !NativeMethods.IsWindow(target.Handle))
@@ -229,6 +264,19 @@ public static class WindowHelper
 
         var className = new StringBuilder(64);
         _ = NativeMethods.GetClassName(handle, className, className.Capacity);
-        return className.ToString() is not ("Shell_TrayWnd" or "Shell_SecondaryTrayWnd" or "Progman" or "WorkerW");
+        return className.ToString() is not (
+            "Shell_TrayWnd" or
+            "Shell_SecondaryTrayWnd" or
+            "Progman" or
+            "WorkerW" or
+            "TopLevelWindowForOverflowXamlIsland" or
+            "NotifyIconOverflowWindow" or
+            "XamlExplorerHostIslandWindow" or
+            "Xaml_WindowedPopupClass" or
+            "ApplicationManager_DesktopShellWindow" or
+            "SystemTray_Main" or
+            "TaskSwitcherWnd" or
+            "MultitaskingViewFrame" or
+            "ForegroundStaging");
     }
 }

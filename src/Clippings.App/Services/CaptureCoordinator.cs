@@ -26,6 +26,7 @@ public enum CaptureInvocationSource
     UserInterface,
     GlobalHotkey,
     CommandLine,
+    QuickCapture,
 }
 
 public sealed class CaptureCoordinator
@@ -92,7 +93,7 @@ public sealed class CaptureCoordinator
             {
                 if (!_foregroundWindows.TryGetTarget(out var target))
                 {
-                    throw new InvalidOperationException("找不到可擷取的目前視窗。");
+                    throw new InvalidOperationException("找不到可擷取的目前視窗，請先切換到目標視窗後再試一次。");
                 }
 
                 windowTarget = target;
@@ -428,7 +429,8 @@ public sealed class CaptureCoordinator
                 await SaveToDirectoryAsync(image, png, item.CreatedAt);
             }
 
-            if (action == OverlayAction.Edit || source == CaptureInvocationSource.GlobalHotkey)
+            if (action == OverlayAction.Edit ||
+                source is CaptureInvocationSource.GlobalHotkey or CaptureInvocationSource.QuickCapture)
             {
                 OpenEditor(image, item);
             }

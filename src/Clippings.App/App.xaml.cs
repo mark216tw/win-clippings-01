@@ -307,11 +307,11 @@ public partial class App : Application
 
         menu.Items.Add(CreateMenuItem("開啟 Clippings", ShowMainWindow));
         menu.Items.Add(CreateSeparator());
-        menu.Items.Add(CreateMenuItem("區域擷取", () => _ = Coordinator!.CaptureRegionAsync()));
-        menu.Items.Add(CreateMenuItem("全螢幕擷取", () => _ = Coordinator!.CaptureFullScreenAsync()));
-        menu.Items.Add(CreateMenuItem("目前螢幕擷取", () => _ = Coordinator!.CaptureMonitorAsync()));
-        menu.Items.Add(CreateMenuItem("目前視窗擷取", () => _ = Coordinator!.CaptureWindowAsync()));
-        menu.Items.Add(CreateMenuItem("延遲擷取", () => _ = Coordinator!.CaptureDelayedAsync()));
+        menu.Items.Add(CreateMenuItem("區域擷取", () => _ = Coordinator!.CaptureRegionAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("全螢幕擷取", () => _ = Coordinator!.CaptureFullScreenAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("目前螢幕擷取", () => _ = Coordinator!.CaptureMonitorAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("目前視窗擷取", () => _ = Coordinator!.CaptureWindowAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("延遲擷取", () => _ = Coordinator!.CaptureDelayedAsync(CaptureInvocationSource.QuickCapture)));
         menu.Items.Add(CreateSeparator());
         _startRecordingMenuItem = CreateMenuItem(AppStrings.StartWindowRecording, () => _ = _recording!.StartWithSelectionAsync());
         _startFullScreenRecordingMenuItem = CreateMenuItem(AppStrings.StartFullScreenRecording, () => _ = _recording!.StartFullScreenAsync());

@@ -408,12 +408,7 @@ public partial class CaptureOverlayWindow : Window
 
         if (e.Key == Key.Enter)
         {
-            Complete(OverlayAction.Copy);
-            e.Handled = true;
-        }
-        else if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            Complete(OverlayAction.Copy);
+            Complete(OverlayAction.Edit);
             e.Handled = true;
         }
         else if (e.Key == Key.E && Keyboard.Modifiers == ModifierKeys.Control)
@@ -421,18 +416,9 @@ public partial class CaptureOverlayWindow : Window
             Complete(OverlayAction.Edit);
             e.Handled = true;
         }
-        else if (e.Key == Key.S && Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            Complete(OverlayAction.Save);
-            e.Handled = true;
-        }
     }
 
-    private void OnCopyClick(object sender, RoutedEventArgs e) => Complete(OverlayAction.Copy);
-
-    private void OnEditClick(object sender, RoutedEventArgs e) => Complete(OverlayAction.Edit);
-
-    private void OnSaveClick(object sender, RoutedEventArgs e) => Complete(OverlayAction.Save);
+    private void OnConfirmClick(object sender, RoutedEventArgs e) => Complete(OverlayAction.Edit);
 
     private void OnCancelClick(object sender, RoutedEventArgs e) => Close();
 
