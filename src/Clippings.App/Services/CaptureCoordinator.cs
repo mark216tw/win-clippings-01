@@ -156,6 +156,11 @@ public sealed class CaptureCoordinator
 
                 if (result is null)
                 {
+                    if (source == CaptureInvocationSource.GlobalHotkey)
+                    {
+                        restoreMainWindow = false;
+                    }
+
                     return;
                 }
 

@@ -307,8 +307,9 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 - 每個螢幕一個無邊框、透明、Topmost 視窗。
 - 顯示凍結的螢幕影像，支援拖曳建立選取區、移動、八方向調整大小；按住 `Shift` 拖曳固定正方形，方向鍵可微調選取區。
 - 放大鏡顯示座標、RGB 與目前顏色。
-- 操作列提供確定、取消。
-- 鍵盤：`Enter`／`Ctrl+E` 確定、`Esc` 取消。
+- 操作列提供確定、取消；取消會清除選取並回到框選前狀態。
+- 鍵盤：`Enter`／`Ctrl+E` 確定；`Esc` 先清除選取，無選取時離開擷取。
+- 全域快捷鍵來源取消擷取時不恢復主視窗，其他來源仍會恢復原本可見的主視窗。
 - 完成時回傳 `OverlayResult`（影像、`PixelRect`、`OverlayAction`）。
 
 ### 5.8 主題與樣式

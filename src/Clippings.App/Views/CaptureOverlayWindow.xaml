@@ -125,7 +125,7 @@
                         Click="OnConfirmClick" />
                 <Border Width="1" Margin="4,4" Background="#33FFFFFF" />
                 <Button Content="取消"
-                        ToolTip="取消 (Esc)"
+                        ToolTip="清除選取範圍，回到框選前狀態 (Esc)"
                         Style="{StaticResource OverlayToolbarButtonStyle}"
                         Click="OnCancelClick" />
             </StackPanel>
@@ -142,7 +142,7 @@
                 CornerRadius="16"
                 Padding="16,8"
                 IsHitTestVisible="False">
-            <TextBlock Text="拖曳選擇範圍；按住 Shift 拖曳為正方形；選取後可用方向鍵微調（Shift 每次 10px）　·　Enter 確定　·　Esc 取消"
+            <TextBlock Text="拖曳選擇範圍；按住 Shift 拖曳為正方形；選取後可用方向鍵微調（Shift 每次 10px）　·　Enter 確定　·　Esc 清除選取；無選取時離開"
                        Foreground="{DynamicResource ToolbarTextBrush}"
                        FontSize="12"
                        TextWrapping="Wrap"

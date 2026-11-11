@@ -4,6 +4,32 @@
 
 ---
 
+## 2026-11-11 - v1.24.4
+
+### 目標
+
+調整區域擷取的取消行為：全域快捷鍵擷取按 `Esc` 離開時不要自動開啟主視窗；框選後按「取消」要回到框選前狀態，而不是結束擷取。
+
+### 變更
+
+- `Views/CaptureOverlayWindow.xaml.cs`：操作列「取消」改呼叫 `ResetSelection()`；`ResetSelection()` 補 `ReleaseMouseCapture()`，確保清除選取後釋放滑鼠捕捉。
+- `Views/CaptureOverlayWindow.xaml`：更新「取消」ToolTip 與提示文字，說明 Esc 會先清除選取、無選取時才離開。
+- `Services/CaptureCoordinator.cs`：框選結果為 `null` 且來源為 `GlobalHotkey` 時不再恢復主視窗，避免取消後自動彈出。
+- `Directory.Build.props`：版本提升至 1.24.4（`FileVersion` 1.24.4.0）。
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`README.md`、`docs/USER_GUIDE.md`、`docs/TECHNICAL.md`。
+
+### 問題與解法
+
+- 取消後主視窗彈出：`CaptureAsync` 以 `restoreMainWindow` 在 `finally` 恢復擷取前可見的主視窗；改為全域快捷鍵取消時清除該旗標。
+- 「取消」直接關閉擷取：原本 `OnCancelClick` 呼叫 `Close()`；改為 `ResetSelection()`，只清除選取並留在覆蓋層。
+- `ResetSelection()` 未釋放滑鼠捕捉，若在拖曳或調整流程中被呼叫可能殘留捕捉，補上 `ReleaseMouseCapture()`。
+
+### 待辦
+
+- 尚未手動驗證多螢幕 DPI 下的取消與主視窗恢復行為。
+
+---
+
 ## 2026-11-07 - v1.24.3
 
 ### 目標

@@ -420,7 +420,7 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnConfirmClick(object sender, RoutedEventArgs e) => Complete(OverlayAction.Edit);
 
-    private void OnCancelClick(object sender, RoutedEventArgs e) => Close();
+    private void OnCancelClick(object sender, RoutedEventArgs e) => ResetSelection();
 
     private void Complete(OverlayAction action)
     {
@@ -735,6 +735,7 @@ public partial class CaptureOverlayWindow : Window
         _adjusting = false;
         _activeGrip = SelectionGrip.None;
         _selection = PixelRect.Empty;
+        ReleaseMouseCapture();
         SelectionBorder.Visibility = Visibility.Collapsed;
         SizeLabel.Visibility = Visibility.Collapsed;
         ActionBar.Visibility = Visibility.Collapsed;
