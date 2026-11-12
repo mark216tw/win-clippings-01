@@ -4,6 +4,58 @@
 
 ---
 
+## 2026-11-12 - v1.24.5
+
+### 目標
+
+提升三種啟動情境的速度：手動開啟主視窗、`--autostart` 開機常駐、快捷鍵／命令列擷取。維持小體積發佈，不啟用 ReadyToRun；允許主視窗外框先出現、內容區短暫顯示載入中。
+
+### 變更
+
+- `Clippings.Core/Services/IClippingsStore.cs`：`Initialize()` 改為 `InitializeAsync()`。
+- `Clippings.Platform/Storage/ClippingsStore.cs`：資料庫初始化改為冪等惰性工作，於背景執行 `EnsureCreatedAsync`、WAL 與索引建立；所有資料操作會先等待初始化完成。
+- `Clippings.App/App.xaml.cs`：移除同步初始化；啟動時於背景預熱資料庫。主視窗改由 `EnsureMainWindow()` 需要時才建立，`--autostart` 與擷取命令不建立主視窗。系統匣、剪貼簿監聽與開機登錄延後到首次畫面繪製後的背景優先權執行。
+- `Clippings.App/Views/MainWindow.xaml(.cs)`：`ContentHost` 加入載入指示；首次頁面改在 `Loaded` 後以 `DispatcherPriority.Background` 載入，避免阻擋外框第一次繪製，並防止重複導覽。
+- `Clippings.App/Services/RecordingCoordinator.cs`：錄影暫存清理移到背景執行。
+- `Clippings.App/Logging/FileLoggerProvider.cs`：舊日誌清理移到背景執行。
+- `Clippings.Platform/Storage/StartupRegistrar.cs`：開機啟動登錄值相同時不再重寫。
+- `Directory.Build.props`：版本升至 1.24.5（`FileVersion` 1.24.5.0）。
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`docs/TECHNICAL.md`。
+
+### 問題與解法
+
+- **EF Core 初始化阻塞 UI**：原本 `OnStartup` 解析儲存服務時同步執行 `EnsureCreated` 與 DDL，主視窗必須等資料庫完成才能建立。改為惰性背景初始化，頁面查詢會自動等待同一個初始化工作。
+- **隱藏啟動仍建立完整主視窗**：`--autostart` 與 `--capture-*` 原本仍解析 `MainWindow`。改為需要顯示時才建立，事件掛鉤集中到 `EnsureMainWindow()`。
+- **首次頁面在第一次繪製前載入**：`Loaded` 直接建立 `HistoryPage` 並查詢，延後畫面出現。改在外框顯示後以背景優先權載入，並用載入指示填補空檔。
+- **啟動時同步檔案維護**：錄影暫存與舊日誌清理改到背景執行，避免磁碟較慢時拖慢啟動。
+- **熱鍵失敗通知時機**：系統匣延後建立後，熱鍵失敗通知改在系統匣初始化後才顯示。
+
+### 驗證
+
+- `dotnet build Clippings.sln -c Debug`：0 警告、0 錯誤。
+- `dotnet test Clippings.sln -c Debug --no-build`：106 項通過。
+- `dotnet format Clippings.sln --verify-no-changes --no-restore`：通過。
+- 啟動基準（Debug，量測至主視窗控制代碼出現）：3 次為 3163／2753／1862 ms。
+- 調整後（Debug，同一量測方式）：多次量測約 0.9～2.5 秒，例如 2464／929／1338 ms。
+- 以 UI Automation 確認主視窗內容已載入「最近擷取」清單。
+- `--autostart` 啟動時不建立主視窗；再執行 `--show` 可透過單一實例轉送並顯示主視窗，第二實例退出碼 0。
+- `--capture-full` 可在不建立主視窗的情況完成擷取並寫入歷史。
+
+### 待辦／已知限制
+
+- 尚未在實際開機登入與混合 DPI 多螢幕環境手動確認。
+- 尚未以發佈版（framework-dependent Release）量測，數值僅供 Debug 相對比較。
+- 剪貼簿監聽改為畫面出現後啟動，若使用者在啟動瞬間立即複製，可能略過該次事件。
+
+### 發佈
+
+- 以 framework-dependent 建立 x64 與 ARM64 版本，打包時排除 PDB。
+- `Clippings-1.24.5-win-x64-framework-dependent.zip`：`3E55DA108C921F83FD1940276D07987BE2C5A37E2DF6805E66F2DB050173E9EC`
+- `Clippings-1.24.5-win-arm64-framework-dependent.zip`：`187118C5104843EA7B056E0168D857B319282F0461C97E845F35F8409F57EC4A`
+- GitHub Release：<https://github.com/mark216tw/win-clippings-01/releases/tag/v1.24.5>
+
+---
+
 ## 2026-11-11 - v1.24.4
 
 ### 目標

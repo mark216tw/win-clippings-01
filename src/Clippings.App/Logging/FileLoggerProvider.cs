@@ -20,7 +20,7 @@ public sealed class FileLoggerProvider : ILoggerProvider
     {
         _directory = directory;
         Directory.CreateDirectory(_directory);
-        CleanupOldLogs();
+        _ = Task.Run(CleanupOldLogs);
 
         _channel = Channel.CreateBounded<LogEntry>(
             new BoundedChannelOptions(ChannelCapacity)

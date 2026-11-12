@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Windows.Threading;
 using CommunityToolkit.Mvvm.Input;
 using Clippings.App.Helpers;
 using Clippings.App.Logging;
@@ -46,6 +47,7 @@ public partial class App : Application
     private MenuItem? _openRecordingMenuItem;
     private MenuItem? _clipboardHistoryMenuItem;
     private ILogger<App>? _logger;
+    private IReadOnlyList<string> _hotkeyFailures = [];
 
     public static bool IsDarkTheme { get; private set; }
 
@@ -117,19 +119,10 @@ public partial class App : Application
         _annotations = _services.GetRequiredService<ScreenAnnotationService>();
         _annotations.CaptureCoordinator = Coordinator;
         Coordinator.AnnotationService = _annotations;
-
-        ApplyTheme(State.Settings.Theme);
-
-        CreateTrayIcon();
-        StartClipboardWatcher();
-        StartupRegistrar.SetEnabled(State.Settings.StartWithWindows);
-
-        _mainWindow = _services.GetRequiredService<MainWindow>();
-        MainWindow = _mainWindow;
-        Coordinator.MainWindow = _mainWindow;
-        _recording.MainWindow = _mainWindow;
-        Coordinator.CaptureStored += (_, _) => _mainWindow.NotifyCaptureStored();
+        Coordinator.CaptureStored += OnCaptureStored;
         State.SettingsChanged += OnSettingsChanged;
+
+        _ = InitializeStoreAsync();
 
         var hotkeyFailures = ApplyHotkeys();
         foreach (var failure in hotkeyFailures)
@@ -137,20 +130,49 @@ public partial class App : Application
             _logger.LogWarning("快捷鍵無法註冊：{Hotkey}", failure);
         }
 
+        ApplyTheme(State.Settings.Theme);
+
         if (!options.HideMainWindow)
         {
-            _mainWindow.Show();
-        }
-
-        if (hotkeyFailures.Count > 0)
-        {
-            _notifications?.Show("部分快捷鍵無法啟用，可能已被其他程式使用。", isError: true);
+            EnsureMainWindow().Show();
         }
 
         _singleInstance.StartListening();
         _singleInstance.ActivationRequested += OnActivationRequested;
 
         ExecuteStartupCommand(options.Command);
+
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            if (IsExiting)
+            {
+                return;
+            }
+
+            CreateTrayIcon();
+            StartClipboardWatcher();
+            StartupRegistrar.SetEnabled(State?.Settings.StartWithWindows ?? false);
+
+            if (hotkeyFailures.Count > 0)
+            {
+                _notifications?.Show("部分快捷鍵無法啟用，可能已被其他程式使用。", isError: true);
+            }
+        }));
+    }
+
+    private async Task InitializeStoreAsync()
+    {
+        try
+        {
+            if (ClippingsStore is not null)
+            {
+                await ClippingsStore.InitializeAsync().ConfigureAwait(false);
+            }
+        }
+        catch (Exception exception)
+        {
+            _logger?.LogError(exception, "初始化 Clippings 資料庫失敗。");
+        }
     }
 
     private static void ReportCommandLine(string message, MessageBoxImage icon)
@@ -264,12 +286,7 @@ public partial class App : Application
                 services.AddSingleton<RecordingTargetPicker>();
                 services.AddSingleton<RecordingCountdownService>();
                 services.AddSingleton<RecordingOverlayService>();
-                services.AddSingleton<IClippingsStore>(_ =>
-                {
-                    var store = new ClippingsStore();
-                    store.Initialize();
-                    return store;
-                });
+                services.AddSingleton<IClippingsStore>(_ => new ClippingsStore());
                 services.AddSingleton<CaptureCoordinator>();
                 services.AddSingleton<RecordingCoordinator>();
                 services.AddSingleton<ScreenAnnotationService>();
@@ -450,11 +467,12 @@ public partial class App : Application
         }
     }
 
-    private void ShowMainWindow() => ShowMainWindow(0);
+    private void ShowMainWindow()
+        => ShowMainWindow(0);
 
     internal void ShowRecentCaptures()
     {
-        if (IsExiting || _mainWindow is null)
+        if (IsExiting)
         {
             return;
         }
@@ -462,28 +480,53 @@ public partial class App : Application
         ShowMainWindow(0);
     }
 
+    private MainWindow EnsureMainWindow()
+    {
+        if (_mainWindow is not null)
+        {
+            return _mainWindow;
+        }
+
+        if (_services is null)
+        {
+            throw new InvalidOperationException("服務尚未初始化，無法建立主視窗。");
+        }
+
+        var window = _services.GetRequiredService<MainWindow>();
+        _mainWindow = window;
+        MainWindow = window;
+        Coordinator!.MainWindow = window;
+        _recording!.MainWindow = window;
+        window.UpdateHotkeyStatus(_hotkeyFailures);
+        return window;
+    }
+
+    private void OnCaptureStored(object? sender, EventArgs e)
+        => _mainWindow?.NotifyCaptureStored();
+
     private void ShowMainWindow(int pageIndex)
     {
-        if (_mainWindow is null)
+        if (IsExiting || _services is null)
         {
             return;
         }
 
-        if (!_mainWindow.IsVisible)
+        var window = EnsureMainWindow();
+        if (!window.IsVisible)
         {
-            _mainWindow.Show();
+            window.Show();
         }
 
-        if (_mainWindow.WindowState == WindowState.Minimized)
+        if (window.WindowState == WindowState.Minimized)
         {
-            _mainWindow.WindowState = WindowState.Normal;
+            window.WindowState = WindowState.Normal;
         }
 
-        _mainWindow.NavigateTo(pageIndex);
-        _mainWindow.Activate();
-        _mainWindow.Topmost = true;
-        _mainWindow.Topmost = false;
-        _mainWindow.Focus();
+        window.NavigateTo(pageIndex);
+        window.Activate();
+        window.Topmost = true;
+        window.Topmost = false;
+        window.Focus();
     }
 
     public IReadOnlyList<string> ApplyHotkeys()
@@ -504,6 +547,7 @@ public partial class App : Application
         Register(settings.HotkeyDelayed, () => _ = Coordinator.CaptureDelayedAsync(CaptureInvocationSource.GlobalHotkey));
         Register(settings.HotkeyAnnotate, () => _annotations?.Toggle());
 
+        _hotkeyFailures = failures;
         _mainWindow?.UpdateHotkeyStatus(failures);
         return failures;
 

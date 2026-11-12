@@ -9,6 +9,8 @@ public sealed class ClippingsStore : IClippingsStore
 {
     private readonly string _dataRoot;
     private readonly DbContextOptions<ClippingsDbContext> _options;
+    private readonly object _initializationGate = new();
+    private Task? _initializationTask;
 
     public ClippingsStore()
         : this(PathUtil.DefaultDataRoot)
@@ -26,7 +28,26 @@ public sealed class ClippingsStore : IClippingsStore
 
     public string DataRoot => _dataRoot;
 
-    public void Initialize()
+    public Task InitializeAsync(CancellationToken cancellationToken = default)
+    {
+        var task = Volatile.Read(ref _initializationTask);
+        if (task is null)
+        {
+            lock (_initializationGate)
+            {
+                task = _initializationTask;
+                if (task is null)
+                {
+                    task = Task.Run(InitializeCoreAsync);
+                    _initializationTask = task;
+                }
+            }
+        }
+
+        return cancellationToken.CanBeCanceled ? task.WaitAsync(cancellationToken) : task;
+    }
+
+    private async Task InitializeCoreAsync()
     {
         Directory.CreateDirectory(_dataRoot);
         Directory.CreateDirectory(PathUtil.ImagesDirectory(_dataRoot));
@@ -34,13 +55,15 @@ public sealed class ClippingsStore : IClippingsStore
         Directory.CreateDirectory(PathUtil.ClipboardDirectory(_dataRoot));
         Directory.CreateDirectory(PathUtil.LogDirectory(_dataRoot));
 
-        using var db = CreateContext();
-        db.Database.EnsureCreated();
-        db.Database.ExecuteSqlRaw("PRAGMA journal_mode=WAL;");
-        db.Database.ExecuteSqlRaw(
-            "CREATE INDEX IF NOT EXISTS IX_Captures_IsFavorite_CreatedAt ON Captures (IsFavorite, CreatedAt);");
-        db.Database.ExecuteSqlRaw(
-            "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_IsPinned_CreatedAt ON ClipboardItems (IsPinned, CreatedAt);");
+        await using var db = CreateContext();
+        await db.Database.EnsureCreatedAsync().ConfigureAwait(false);
+        await db.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;").ConfigureAwait(false);
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS IX_Captures_IsFavorite_CreatedAt ON Captures (IsFavorite, CreatedAt);")
+            .ConfigureAwait(false);
+        await db.Database.ExecuteSqlRawAsync(
+            "CREATE INDEX IF NOT EXISTS IX_ClipboardItems_IsPinned_CreatedAt ON ClipboardItems (IsPinned, CreatedAt);")
+            .ConfigureAwait(false);
     }
 
     public async Task<CaptureItem> AddCaptureAsync(
@@ -53,6 +76,8 @@ public sealed class ClippingsStore : IClippingsStore
         ArgumentNullException.ThrowIfNull(item);
         ArgumentNullException.ThrowIfNull(imageBytes);
         ArgumentNullException.ThrowIfNull(thumbnailBytes);
+
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
 
         if (string.IsNullOrWhiteSpace(item.Hash))
         {
@@ -96,6 +121,8 @@ public sealed class ClippingsStore : IClippingsStore
     {
         ArgumentNullException.ThrowIfNull(imageBytes);
         ArgumentNullException.ThrowIfNull(thumbnailBytes);
+
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
 
         await using var db = CreateContext();
         var entity = await db.Captures
@@ -154,6 +181,8 @@ public sealed class ClippingsStore : IClippingsStore
         int limit,
         CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var query = db.Captures.AsNoTracking();
 
@@ -181,6 +210,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task<CaptureItem?> GetCaptureAsync(int id, CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var entity = await db.Captures
             .AsNoTracking()
@@ -191,6 +222,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task DeleteCaptureAsync(int id, CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var entity = await db.Captures
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
@@ -208,6 +241,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task<int> DeleteNonFavoriteCapturesAsync(CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var targets = await db.Captures
             .Where(item => !item.IsFavorite)
@@ -237,6 +272,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task SetCaptureFavoriteAsync(int id, bool isFavorite, CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var entity = await db.Captures
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
@@ -252,18 +289,24 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task<int> CountCapturesAsync(CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         return await db.Captures.CountAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task<int> CountClipboardItemsAsync(CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         return await db.ClipboardItems.CountAsync(cancellationToken).ConfigureAwait(false);
     }
 
     public async Task TrimCapturesAsync(int maxItems, int retentionDays, CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var cutoff = DateTime.UtcNow.AddDays(-Math.Max(0, retentionDays));
         var stale = await db.Captures
@@ -307,6 +350,8 @@ public sealed class ClippingsStore : IClippingsStore
     {
         ArgumentNullException.ThrowIfNull(item);
 
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var existing = await db.ClipboardItems
             .FirstOrDefaultAsync(row => row.Hash == item.Hash, cancellationToken)
@@ -347,6 +392,8 @@ public sealed class ClippingsStore : IClippingsStore
         int limit,
         CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var query = db.ClipboardItems.AsNoTracking();
 
@@ -373,6 +420,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task DeleteClipboardItemAsync(int id, CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var entity = await db.ClipboardItems
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
@@ -390,6 +439,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task SetClipboardPinnedAsync(int id, bool isPinned, CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var entity = await db.ClipboardItems
             .FirstOrDefaultAsync(item => item.Id == id, cancellationToken)
@@ -405,6 +456,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task ClearClipboardItemsAsync(CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var items = await db.ClipboardItems
             .Where(item => !item.IsPinned)
@@ -426,6 +479,8 @@ public sealed class ClippingsStore : IClippingsStore
 
     public async Task TrimClipboardItemsAsync(int maxItems, int retentionDays, CancellationToken cancellationToken = default)
     {
+        await InitializeAsync(cancellationToken).ConfigureAwait(false);
+
         await using var db = CreateContext();
         var cutoff = DateTime.UtcNow.AddDays(-Math.Max(0, retentionDays));
         var stale = await db.ClipboardItems

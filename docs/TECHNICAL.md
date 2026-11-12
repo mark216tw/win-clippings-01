@@ -180,7 +180,7 @@ tests/
 `ClippingsStore` 使用 EF Core 與 SQLite：
 
 - 資料庫路徑：`%LOCALAPPDATA%\Clippings\clippings.db`。
-- 啟動時 `EnsureCreated()`，並啟用 `PRAGMA journal_mode=WAL`。
+- 初始化為冪等惰性工作，於背景執行 `EnsureCreatedAsync()`、`PRAGMA journal_mode=WAL` 與必要索引建立；所有資料操作會先等待初始化完成，避免阻塞啟動時的 UI 執行緒。
 - 連線啟用 `Pooling=True`，每次開啟時套用 `synchronous=NORMAL`、`temp_store=MEMORY`、`cache_size=-8192`。
 - 圖檔與縮圖先寫入磁碟，再寫入資料庫；刪除資料列時嘗試刪除對應檔案。
 - `TrimCapturesAsync`／`TrimClipboardItemsAsync` 同時處理「超過天數」與「超過數量」，收藏／釘選項目不受影響。
@@ -230,10 +230,11 @@ HKCU\Software\Microsoft\Windows\CurrentVersion\Run
 1. 解析命令列參數。
 2. `--help` 或無效參數：輸出後結束（0／2）。
 3. 建立 `SingleInstanceService`；非第一個實例則轉送參數並結束（0／1）。
-4. 建立 Host 與 DI 容器，啟動日誌、設定、儲存等服務。
-5. 套用主題、建立系統匣、啟動剪貼簿監聽、同步開機啟動設定。
-6. 建立 `MainWindow`，依參數決定是否顯示。
-7. 註冊全域熱鍵、啟動單一實例監聽、執行冷啟動命令。
+4. 建立 Host 與 DI 容器，啟動日誌、設定等服務；資料庫初始化於背景惰性執行。
+5. 註冊全域熱鍵、套用主題。
+6. 只有需要顯示時才建立 `MainWindow`；`--autostart` 與擷取命令不會預先建立。主視窗先顯示外框，內容頁於第一次繪製後以背景優先權載入。
+7. 啟動單一實例監聽、執行冷啟動命令。
+8. 首次畫面繪製後於背景建立系統匣、啟動剪貼簿監聽、同步開機啟動設定。
 
 ### 5.2 CaptureCoordinator
 

@@ -50,7 +50,7 @@ public sealed class RecordingCoordinator
         _appState = appState;
         _notifications = notifications;
         _logger = logger;
-        CleanupStaleTemporaryFiles();
+        _ = Task.Run(CleanupStaleTemporaryFiles);
     }
 
     public event EventHandler? StateChanged;

@@ -13,7 +13,7 @@ public interface IClippingsStore
 {
     string DataRoot { get; }
 
-    void Initialize();
+    Task InitializeAsync(CancellationToken cancellationToken = default);
 
     Task<CaptureItem> AddCaptureAsync(CaptureItem item, byte[] imageBytes, string extension, byte[] thumbnailBytes, CancellationToken cancellationToken = default);
 

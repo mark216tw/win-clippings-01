@@ -1,6 +1,6 @@
 # Clippings 剪貼簿
 
-Windows 桌面擷取、標註與剪貼簿歷史工具，使用 .NET 10 與 WPF 開發，操作習慣參考 PicPick。程式可免安裝執行、常駐系統匣，所有資料都留在本機，不需要網路連線。
+Windows 桌面擷取、標註與剪貼簿歷史工具，使用 .NET 10 與 WPF 開發。程式可免安裝執行、常駐系統匣，所有資料都留在本機，不需要網路連線。
 
 ![.NET](https://img.shields.io/badge/.NET-10-512BD4)
 ![Platform](https://img.shields.io/badge/Windows-10%201809%2B-0078D4)
@@ -44,8 +44,8 @@ Clippings 解決日常截圖與複製貼上的重複工作：用全域快捷鍵�
 
 | 平台 | 檔案 | 大小 | 需求 |
 | --- | --- | ---: | --- |
-| x64 | `Clippings-1.24.3-win-x64-framework-dependent.zip` | 約 17.5 MB | 需安裝 .NET 10 Desktop Runtime（x64） |
-| ARM64 | `Clippings-1.24.3-win-arm64-framework-dependent.zip` | 約 16.7 MB | 需安裝 .NET 10 Desktop Runtime（ARM64） |
+| x64 | `Clippings-1.24.5-win-x64-framework-dependent.zip` | 約 17.5 MB | 需安裝 .NET 10 Desktop Runtime（x64） |
+| ARM64 | `Clippings-1.24.5-win-arm64-framework-dependent.zip` | 約 16.7 MB | 需安裝 .NET 10 Desktop Runtime（ARM64） |
 
 .NET 10 Desktop Runtime 下載：<https://dotnet.microsoft.com/download/dotnet/10.0>
 

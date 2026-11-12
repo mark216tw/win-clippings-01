@@ -75,7 +75,13 @@ public partial class MainWindow : Window
         }
 
         _loadedOnce = true;
-        NavigateTo(NavList.SelectedIndex < 0 ? 0 : NavList.SelectedIndex);
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+        {
+            if (ContentHost.Content is null)
+            {
+                NavigateTo(NavList.SelectedIndex < 0 ? 0 : NavList.SelectedIndex);
+            }
+        }));
     }
 
     public void NavigateTo(int index)
@@ -155,6 +161,7 @@ public partial class MainWindow : Window
                 break;
         }
 
+        ShellLoading.Visibility = Visibility.Collapsed;
         _currentPageIndex = index;
     }
 

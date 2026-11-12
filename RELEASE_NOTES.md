@@ -1,3 +1,26 @@
+# Clippings 剪貼簿 1.24.5
+
+## 啟動速度提升
+
+- 開啟程式時會更快看到主視窗外框，最近擷取與其他頁面接著載入。
+- 開機自動啟動與命令列擷取不再先建立主視窗，背景常駐啟動更輕快。
+- 資料庫初始化與暫存清理移到背景執行，減少啟動時的等待。
+- 系統匣與剪貼簿監聽改在畫面出現後啟動，不影響既有擷取與快捷鍵操作。
+
+### 下載
+
+- `win-x64`：適用 Intel、AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+本版為 framework-dependent，需安裝對應架構的 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)。解壓縮 ZIP 後直接執行 `Clippings.exe`。
+
+### SHA-256
+
+- `Clippings-1.24.5-win-x64-framework-dependent.zip`：`3E55DA108C921F83FD1940276D07987BE2C5A37E2DF6805E66F2DB050173E9EC`
+- `Clippings-1.24.5-win-arm64-framework-dependent.zip`：`187118C5104843EA7B056E0168D857B319282F0461C97E845F35F8409F57EC4A`
+
+---
+
 # Clippings 剪貼簿 1.24.4
 
 ## 區域擷取取消行為調整
