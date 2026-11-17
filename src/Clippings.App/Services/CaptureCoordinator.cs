@@ -396,6 +396,11 @@ public sealed class CaptureCoordinator
                 }
             }
 
+            if (mode == CaptureMode.Region && action == OverlayAction.Copy)
+            {
+                return;
+            }
+
             var createdAt = DateTimeOffset.Now;
             var (png, hash) = await Task.Run(() =>
             {

@@ -197,6 +197,14 @@ public partial class CaptureOverlayWindow : Window
 
     private void OnMouseMove(object sender, MouseEventArgs e)
     {
+        if (ActionBar.Visibility == Visibility.Visible && ActionBar.IsMouseOver)
+        {
+            Cursor = Cursors.Arrow;
+            CursorLayer.Visibility = Visibility.Collapsed;
+            MagnifierPanel.Visibility = Visibility.Collapsed;
+            return;
+        }
+
         var position = ClampToWindow(e.GetPosition(this));
 
         if (_selecting)
@@ -416,7 +424,14 @@ public partial class CaptureOverlayWindow : Window
             Complete(OverlayAction.Edit);
             e.Handled = true;
         }
+        else if (e.Key == Key.C && Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            Complete(OverlayAction.Copy);
+            e.Handled = true;
+        }
     }
+
+    private void OnCopyClick(object sender, RoutedEventArgs e) => Complete(OverlayAction.Copy);
 
     private void OnConfirmClick(object sender, RoutedEventArgs e) => Complete(OverlayAction.Edit);
 

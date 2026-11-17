@@ -1,3 +1,30 @@
+# Clippings 剪貼簿 2 1.30.0
+
+## 區域擷取新增複製
+
+- 區域擷取操作列新增「複製」按鈕（`Ctrl+C`），只把框選範圍複製到剪貼簿。
+- 複製不會新增工作區頁籤、不自動存檔，也不開啟編輯器。
+- 操作列按鈕順序調整為「複製、確定、取消」。
+
+## 其他改善
+
+- 滑鼠移到操作列按鈕時不再顯示十字游標。
+- 區域擷取提示移除「Shift 每次 10px」文字，改為說明 `Ctrl+C` 複製。
+
+## 下載
+
+- `win-x64`：適用 Intel、AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+僅提供 framework-dependent ZIP，請解壓縮後使用。需安裝 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)；解壓縮後執行 `Clippings.App.New.exe`。
+
+## SHA-256
+
+- `Clippings-1.30.0-win-x64-framework-dependent.zip`：`30CA65F9680D549743C36148FCF191B4CD258F82206549C7426E4C3B662B1BA0`
+- `Clippings-1.30.0-win-arm64-framework-dependent.zip`：`0360345AAC192C07ACD11D74BD76FC9911D7114BD9A5168AB0C6A44FE540851A`
+
+---
+
 # Clippings 剪貼簿 2 1.29.2
 
 ## 結束程式行為調整

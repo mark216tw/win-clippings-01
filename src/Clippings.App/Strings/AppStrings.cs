@@ -48,6 +48,10 @@ public static class AppStrings
     public const string OpenRecordingFolder = "開啟錄影資料夾";
     public const string CaptureCursor = "擷取滑鼠游標";
     public const string CaptureCursorToolTip = "開啟後所有截圖模式都會包含滑鼠游標（預設關閉）";
+    public const string RegionCopyToolTip = "複製框選範圍到剪貼簿 (Ctrl+C)";
+    public const string RegionConfirmToolTip = "確定並在 Clippings 編輯器中開啟 (Enter)";
+    public const string RegionCancelToolTip = "清除選取範圍，回到框選前狀態 (Esc)";
+    public const string RegionCaptureHint = "拖曳選擇範圍；按住 Shift 拖曳為正方形；選取後可用方向鍵微調　·　Ctrl+C 複製　·　Enter 確定　·　Esc 清除選取；無選取時離開";
 
     public const string ActionUndo = "復原";
     public const string ActionRedo = "重做";
@@ -73,6 +77,7 @@ public static class AppStrings
     public const string OpenFromFile = "開啟檔案…";
     public const string OpenImageClipboardEmpty = "剪貼簿中沒有可開啟的圖片。";
     public const string OpenImageFileFilter = "影像檔 (*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp)|*.png;*.jpg;*.jpeg;*.bmp;*.gif;*.webp|所有檔案 (*.*)|*.*";
+    public const string ActionConfirm = "確定";
     public const string ActionCancel = "取消";
     public const string ActionDelete = "刪除";
     public const string ActionDeleteAll = "刪除全部";

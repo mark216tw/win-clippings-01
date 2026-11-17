@@ -4,6 +4,38 @@
 
 ---
 
+## 2026-11-17 - 區域擷取新增複製（v1.30.0）
+
+### 目標
+
+在區域擷取操作列新增「複製」功能，僅將框選範圍複製到剪貼簿；同時修正操作列按鈕上的十字游標，並移除提示中的「Shift 每次 10px」。
+
+### 變更
+
+- `Views/CaptureOverlayWindow.xaml`：操作列改為「複製、確定、取消」，文字與 tooltip 改由 `AppStrings` 提供；提示文字改綁 `RegionCaptureHint` 並移除「Shift 每次 10px」，加入 `Ctrl+C` 複製說明
+- `Views/CaptureOverlayWindow.xaml.cs`：新增 `OnCopyClick` 與 `Ctrl+C` 快捷鍵（`OverlayAction.Copy`）；`OnMouseMove` 在游標位於操作列時隱藏自繪十字並使用箭頭游標
+- `Services/CaptureCoordinator.cs`：區域擷取且動作為 `Copy` 時，複製後直接結束流程，不編碼 PNG、不自動存檔、不新增頁籤
+- `Strings/AppStrings.cs`：新增 `ActionConfirm`、`RegionCopyToolTip`、`RegionConfirmToolTip`、`RegionCancelToolTip`、`RegionCaptureHint`
+- `Directory.Build.props`：版本調整為 1.30.0
+
+### 問題與解法
+
+- 原本 `OnActionBarMouseEnter` 雖會隱藏自繪十字，但後續 `MouseMove` 會再次觸發 `UpdateCrosshair`，導致按鈕上仍出現十字；改在 `OnMouseMove` 開頭偵測 `ActionBar.IsMouseOver` 並提早返回
+- 既有 `OverlayAction.Copy` 會同時複製、存檔並新增頁籤；以 `CaptureMode.Region` 條件分流，避免影響其他擷取模式
+
+### 待辦
+
+- 尚未實測混合 DPI 多螢幕下的操作列位置與游標行為
+
+### 驗證與發佈
+
+- `dotnet build`、`dotnet test`（106 項通過）、`dotnet format --verify-no-changes` 皆通過
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`docs/USER_GUIDE.md`
+- 以 mark216tw <mark216tw@gmail.com> 建立 commit、`v1.30.0` tag 與 GitHub Release
+- Release 資產（framework-dependent、ZIP 去除 PDB）：
+  - `Clippings-1.30.0-win-x64-framework-dependent.zip`（14,167,593 bytes，SHA-256 `30CA65F9680D549743C36148FCF191B4CD258F82206549C7426E4C3B662B1BA0`）
+  - `Clippings-1.30.0-win-arm64-framework-dependent.zip`（13,533,777 bytes，SHA-256 `0360345AAC192C07ACD11D74BD76FC9911D7114BD9A5168AB0C6A44FE540851A`）
+
 ## 2026-11-14 - 結束功能行為調整（v1.29.2）
 
 ### 目標
