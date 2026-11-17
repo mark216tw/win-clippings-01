@@ -4,6 +4,48 @@
 
 ---
 
+## 2026-11-17 - 修正頁籤右鍵選單造成啟動錯誤（v1.30.2）
+
+### 目標
+
+修正新增重新命名後，啟動擷圖工作區出現 `NullReferenceException`。
+
+### 變更與問題解法
+
+- 日誌顯示 `WorkspaceTabStrip.SetCloseAllEnabled` 的 `CloseAllButton` 為 null；以獨立 STA WPF 初始化程式重現。
+- 移除樣式 Setter 中 `MenuItem.Click` 的 XAML 事件連接，改用 `ContextMenuOpening` EventSetter 動態建立重新命名項目，避免干擾 WPF 名稱欄位連接。
+- 選單開啟時以容器的目前 DataContext 取得目標頁籤，保留右鍵非選取頁籤的重新命名功能。
+- 版本更新至 1.30.2，更新異動紀錄與版本說明。
+
+### 待辦／驗證
+
+- 獨立 STA WPF 回歸程式：修正前重現相同空值例外；修正後頁籤列初始化與 `SetCloseAllEnabled` 通過，非選取頁籤選單目標、重新命名視窗初始化、空白名稱停用、去除頭尾空白與 Title 變更通知皆通過。
+- 回歸程式位於 `D:\TEMP\opencode`，不加入產品原始碼；測試宿主另嵌入圖示，對應產品的根目錄圖示資源。
+- `dotnet build`（Debug）通過，0 警告、0 錯誤；`dotnet format --verify-no-changes --no-restore` 與 `git diff --check` 通過。
+- 尚未以滑鼠實際操作完整主視窗。
+
+## 2026-11-17 - 擷圖頁籤重新命名（v1.30.1）
+
+### 目標
+
+讓使用者在擷圖頁籤按右鍵，透過「重新命名」自訂頁籤名稱。
+
+### 變更
+
+- 頁籤加入右鍵選單與重新命名視窗，預填並全選原名稱，支援 Enter 確認與 Esc 取消。
+- `WorkspaceTab.Title` 使用屬性變更通知，確認後立即更新頁籤；移除名稱頭尾空白並拒絕空白名稱。
+- 文字集中於 `AppStrings.cs`，版本更新為 1.30.1。
+
+### 問題與解法
+
+- WPF 右鍵選單有獨立視覺樹，以 `PlacementTarget.DataContext` 取得被點選的頁籤，避免改到目前選取的其他頁籤。
+
+### 待辦／驗證
+
+- `dotnet build`（Debug）通過，0 警告、0 錯誤；`dotnet format --verify-no-changes --no-restore` 與 `git diff --check` 通過。
+- 互動操作（右鍵非目前頁籤、確認／取消、空白名稱）尚未實機驗證。
+- 自訂名稱僅保留於本次執行期間，重開程式時仍依既有流程產生頁籤名稱。
+
 ## 2026-11-17 - 區域擷取新增複製（v1.30.0）
 
 ### 目標

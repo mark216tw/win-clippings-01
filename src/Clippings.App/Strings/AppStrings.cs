@@ -9,6 +9,8 @@ public static class AppStrings
     public const string WorkspaceEmpty = "還沒有擷圖，按 Ctrl+Shift+X 或下方按鈕開始。";
     public const string WorkspaceCloseAll = "全部關閉";
     public const string WorkspaceCloseTab = "關閉頁籤";
+    public const string WorkspaceRenameTab = "重新命名";
+    public const string WorkspaceTabName = "頁籤名稱";
     public const string WorkspaceRestoreTab = "復原";
     public const string WorkspaceRestoreAll = "復原全部";
     public const string WorkspaceRestoreLimitReached = "頁籤已達上限，無法復原。";

@@ -17,9 +17,18 @@
                      Background="Transparent"
                      BorderThickness="0"
                      SelectionChanged="OnTabSelectionChanged"
-                     ItemContainerStyle="{StaticResource WorkspaceTabItemStyle}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                      ScrollViewer.VerticalScrollBarVisibility="Disabled">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource WorkspaceTabItemStyle}">
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu />
+                            </Setter.Value>
+                        </Setter>
+                        <EventSetter Event="ContextMenuOpening" Handler="OnTabContextMenuOpening" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
                 <ListBox.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Orientation="Horizontal" />

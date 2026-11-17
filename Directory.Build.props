@@ -11,9 +11,9 @@
     <Platforms>x64;arm64</Platforms>
     <Platform Condition="'$(Platform)' == ''">x64</Platform>
     <PlatformTarget Condition="'$(PlatformTarget)' == ''">$(Platform)</PlatformTarget>
-    <Version>1.30.0</Version>
+    <Version>1.30.2</Version>
     <AssemblyVersion>1.30.0.0</AssemblyVersion>
-    <FileVersion>1.30.0.0</FileVersion>
+    <FileVersion>1.30.2.0</FileVersion>
     <Product>Clippings.App.New</Product>
     <AssemblyTitle>Clippings 剪貼簿 2</AssemblyTitle>
     <Description>Clippings 剪貼簿 2</Description>

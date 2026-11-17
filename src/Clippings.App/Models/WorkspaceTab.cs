@@ -5,10 +5,15 @@ namespace Clippings.App.Models;
 public sealed class WorkspaceTab : ObservableObject
 {
     private bool _isSaved;
+    private string _title = string.Empty;
 
     public required DateTimeOffset CreatedAt { get; init; }
 
-    public required string Title { get; set; }
+    public required string Title
+    {
+        get => _title;
+        set => SetProperty(ref _title, value);
+    }
 
     public int Width { get; set; }
 
