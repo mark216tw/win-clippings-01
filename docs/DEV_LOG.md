@@ -4,6 +4,52 @@
 
 ---
 
+## 2026-11-18 - 設定頁「關於」與「結束」區塊對調（v1.30.4）
+
+### 目標
+
+讓「結束」區塊緊接在功能設定之後、「關於」留在最後，並讓最後一張卡片與畫面底部保留呼吸空間。
+
+### 變更
+
+- `Views/SettingsPage.xaml`：「結束」卡片移到「螢幕錄影」之後、「關於」卡片之前；「螢幕錄影」卡片下緣間距由 16 改為 12 以維持一致節奏。
+- `Views/SettingsPage.xaml`：「關於」卡片改為 `Margin="0,0,0,12"`，與捲動區底部邊緣留出間距。
+- 版本更新為 1.30.4。
+
+### 問題與解法
+
+- StackPanel 不會合併相鄰元件的 Margin，因此把錄影卡片的下緣間距一併調整為 12，避免出現 28 DIP 的過大空隙。
+
+### 待辦
+
+- 未實測窄視窗與高 DPI 下的底部留白視覺。
+
+---
+
+## 2026-11-18 - 「結束」按鈕移至設定頁（v1.30.3）
+
+### 目標
+
+把主畫面左下角的「結束」按鈕改成圖示加文字，並移到設定頁最下方，讓側欄只留擷取與錄影相關操作。
+
+### 變更
+
+- `Views/MainWindow.xaml(.cs)`：移除側欄 `ExitAppButton` 與 `OnExitAppClick`。
+- `Styles/Controls.xaml`：新增 `IconTextButtonStyle`，樣板改用 `ContentPresenter`（`BaseButtonStyle` 會把 Content 當純文字，圖示不會顯示），滑鼠移入時前景轉 `DangerBrush`。
+- `Views/SettingsPage.xaml(.cs)`：在「關於」卡片後新增「結束」卡片，右側為電源圖示加「結束」文字的按鈕；`OnExitAppClick` 沿用 `ConfirmLeave()` 後呼叫 `App.Current.RequestExit()`。
+- `Strings/AppStrings.cs`：新增 `ExitAppDescription`；`ExitApp` 與 `ExitAppToolTip` 維持原字串，系統匣選單仍為「結束」。
+- 版本更新為 1.30.3。
+
+### 問題與解法
+
+- 圖示放在按鈕的 `ContentPresenter` 內不會自動繼承 Foreground，改以 `RelativeSource AncestorType=Button` 綁定 Button 的 `Foreground`；若用 `TextBlock` 隱含樣式會蓋掉 Hover 的警示色。
+
+### 待辦
+
+- 未實測設定頁在窄視窗下的換行，以及未儲存變更時按下「結束」的提示流程。
+
+---
+
 ## 2026-11-17 - 修正頁籤右鍵選單造成啟動錯誤（v1.30.2）
 
 ### 目標

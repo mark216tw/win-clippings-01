@@ -349,6 +349,16 @@ public partial class SettingsPage : UserControl
     private void OnOpenSaveFolderClick(object sender, RoutedEventArgs e)
         => OpenFolder(ResolveFolder(SaveDirBox.Text, PathUtil.DefaultSaveRoot));
 
+    private void OnExitAppClick(object sender, RoutedEventArgs e)
+    {
+        if (!ConfirmLeave())
+        {
+            return;
+        }
+
+        App.Current.RequestExit();
+    }
+
     private static string ResolveFolder(string? configured, string fallback)
     {
         var path = string.IsNullOrWhiteSpace(configured) ? fallback : configured.Trim();

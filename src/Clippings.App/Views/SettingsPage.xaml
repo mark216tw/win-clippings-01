@@ -197,7 +197,7 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,16">
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="螢幕錄影" Style="{StaticResource SectionTitleStyle}" />
 
@@ -258,7 +258,43 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource CardBorderStyle}">
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <DockPanel>
+                    <Button x:Name="ExitAppButton"
+                            DockPanel.Dock="Right"
+                            Style="{StaticResource IconTextButtonStyle}"
+                            Margin="16,0,0,0"
+                            VerticalAlignment="Center"
+                            Click="OnExitAppClick"
+                            ToolTip="{x:Static strings:AppStrings.ExitAppToolTip}"
+                            AutomationProperties.Name="{x:Static strings:AppStrings.ExitApp}">
+                        <StackPanel Orientation="Horizontal">
+                            <Viewbox Width="16" Height="16" Margin="0,0,6,0" VerticalAlignment="Center">
+                                <Path Width="16"
+                                      Height="16"
+                                      Data="M8,2 L8,8 M4.9,4.3 A4.6,4.6 0 1 0 11.1,4.3"
+                                      Fill="Transparent"
+                                      Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                                      StrokeThickness="1.5"
+                                      StrokeStartLineCap="Round"
+                                      StrokeEndLineCap="Round" />
+                            </Viewbox>
+                            <TextBlock Text="{x:Static strings:AppStrings.ExitApp}"
+                                       VerticalAlignment="Center"
+                                       Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}" />
+                        </StackPanel>
+                    </Button>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="結束" Style="{StaticResource SectionTitleStyle}" />
+                        <TextBlock Text="{x:Static strings:AppStrings.ExitAppDescription}"
+                                   Style="{StaticResource CaptionStyle}"
+                                   Margin="0,6,0,0"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
                 <StackPanel>
                     <TextBlock Text="關於" Style="{StaticResource SectionTitleStyle}" />
 
