@@ -6,7 +6,7 @@
         WindowStyle="None"
         ResizeMode="NoResize"
         ShowInTaskbar="False"
-        ShowActivated="True"
+        ShowActivated="False"
         Topmost="True"
         AllowsTransparency="True"
         Background="Transparent"
@@ -16,7 +16,9 @@
         SnapsToDevicePixels="True"
         Loaded="OnLoaded"
         Closed="OnClosed"
-        KeyDown="OnKeyDown">
+        KeyDown="OnKeyDown"
+        MouseEnter="OnWindowMouseEnter"
+        MouseLeave="OnWindowMouseLeave">
 
     <Grid UseLayoutRounding="True" SnapsToDevicePixels="True">
         <Border Background="{DynamicResource ToolbarBrush}"
@@ -35,7 +37,8 @@
                 MouseLeftButtonDown="OnBarMouseDown">
         <StackPanel>
             <DockPanel>
-                <Button x:Name="ExitButton" DockPanel.Dock="Right" Style="{StaticResource AnnotateIconButtonStyle}"
+                <Button x:Name="ExitButton" DockPanel.Dock="Right" VerticalAlignment="Top"
+                        Style="{StaticResource AnnotateIconButtonStyle}"
                         Click="OnExitClick" ToolTip="結束標註 (Esc)" AutomationProperties.Name="結束標註">
                     <Viewbox Width="16" Height="16">
                         <Path Width="16" Height="16" Data="M3,3 L13,13 M13,3 L3,13"
@@ -170,9 +173,21 @@
                     </Viewbox>
                 </Button>
 
+                <ToggleButton x:Name="PinButton" Style="{StaticResource AnnotatePointerToggleStyle}"
+                              Checked="OnPinChecked" Unchecked="OnPinUnchecked"
+                              ToolTip="釘住工具列：開啟時不自動收合，關閉時吸附後自動收合"
+                              AutomationProperties.Name="釘住工具列">
+                    <Viewbox Width="16" Height="16">
+                        <Path Width="16" Height="16"
+                              Data="M10,1 L10,5 L13,8 L3,8 L6,5 L6,1 Z M8,8 L8,14"
+                              Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
+                    </Viewbox>
+                </ToggleButton>
+
                 <ToggleButton x:Name="PointerButton" Style="{StaticResource AnnotatePointerToggleStyle}"
                               Checked="OnPointerChecked" Unchecked="OnPointerUnchecked"
-                              ToolTip="游標模式：點擊穿透到底下的應用程式，此模式無法繪圖（0、C）"
+                              ToolTip="游標模式：點擊穿透到底下的應用程式，此模式無法繪圖（0、C；中鍵切換）"
                               AutomationProperties.Name="游標模式">
                     <Viewbox Width="16" Height="16">
                         <Path Width="16" Height="16" Data="M4,2 L4,13.5 L7,10.5 L9.2,14.5 L11.2,13.4 L9,9.5 L13,9.5 Z"
@@ -239,42 +254,49 @@
                     </Popup>
                 </Grid>
 
-                <TextBlock x:Name="StrokeWidthLabel" Text="線寬" Foreground="{DynamicResource ToolbarTextBrush}"
-                           FontSize="12" Margin="8,0,4,0" VerticalAlignment="Center" />
-                <ComboBox x:Name="StrokeCombo" Width="72" SelectionChanged="OnStrokeChanged" ToolTip="線條粗細"
-                          AutomationProperties.LabeledBy="{Binding ElementName=StrokeWidthLabel}">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <TextBlock Text="{Binding StringFormat={}{0} px}" />
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <StackPanel x:Name="StrokeGroup" Orientation="Horizontal">
+                    <TextBlock x:Name="StrokeWidthLabel" Text="線寬" Foreground="{DynamicResource ToolbarTextBrush}"
+                               FontSize="12" Margin="8,0,4,0" VerticalAlignment="Center" />
+                    <ComboBox x:Name="StrokeCombo" Width="72" SelectionChanged="OnStrokeChanged" ToolTip="線條粗細"
+                              AutomationProperties.LabeledBy="{Binding ElementName=StrokeWidthLabel}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding StringFormat={}{0} px}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                </StackPanel>
 
-                <TextBlock x:Name="BackdropLabel" Text="背景" Foreground="{DynamicResource ToolbarTextBrush}"
-                           FontSize="12" Margin="8,0,4,0" VerticalAlignment="Center" />
-                <ComboBox x:Name="BackdropCombo" Width="86" SelectionChanged="OnBackdropChanged" ToolTip="標註背景"
-                          AutomationProperties.LabeledBy="{Binding ElementName=BackdropLabel}" />
+                <StackPanel x:Name="BackdropGroup" Orientation="Horizontal">
+                    <TextBlock x:Name="BackdropLabel" Text="背景" Foreground="{DynamicResource ToolbarTextBrush}"
+                               FontSize="12" Margin="8,0,4,0" VerticalAlignment="Center" />
+                    <Button x:Name="BackdropButton" Content="透明" Style="{StaticResource OverlayToolbarButtonStyle}"
+                            Click="OnBackdropClick" ToolTip="標註背景：透明（點擊切換）"
+                            AutomationProperties.LabeledBy="{Binding ElementName=BackdropLabel}" />
+                </StackPanel>
 
                 <Border Width="1" Margin="6,4" Background="#33FFFFFF" />
 
-                <Button x:Name="UndoButton" Style="{StaticResource AnnotateIconButtonStyle}"
-                        Click="OnUndoClick" ToolTip="復原 (Ctrl+Z)" AutomationProperties.Name="復原">
-                    <Viewbox Width="16" Height="16">
-                        <Path Width="16" Height="16" Data="M5.5,3.5 L2,7 L5.5,10.5 M2,7 L9.5,7 A3.75,3.75 0 0 1 9.5,14.5"
-                              Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
-                    </Viewbox>
-                </Button>
-                <Button x:Name="RedoButton" Style="{StaticResource AnnotateIconButtonStyle}"
-                        Click="OnRedoClick" ToolTip="重做 (Ctrl+Y)" AutomationProperties.Name="重做">
-                    <Viewbox Width="16" Height="16">
-                        <Path Width="16" Height="16" Data="M10.5,3.5 L14,7 L10.5,10.5 M14,7 L6.5,7 A3.75,3.75 0 0 0 6.5,14.5"
-                              Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
-                    </Viewbox>
-                </Button>
-                <Button x:Name="ClearButton" Content="清空" Style="{StaticResource OverlayToolbarButtonStyle}"
-                        Click="OnClearClick" ToolTip="清除所有標註（可復原）" AutomationProperties.Name="清空標註" />
+                <StackPanel x:Name="HistoryGroup" Orientation="Horizontal">
+                    <Button x:Name="UndoButton" Style="{StaticResource AnnotateIconButtonStyle}"
+                            Click="OnUndoClick" ToolTip="復原 (Ctrl+Z)" AutomationProperties.Name="復原">
+                        <Viewbox Width="16" Height="16">
+                            <Path Width="16" Height="16" Data="M5.5,3.5 L2,7 L5.5,10.5 M2,7 L9.5,7 A3.75,3.75 0 0 1 9.5,14.5"
+                                  Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="RedoButton" Style="{StaticResource AnnotateIconButtonStyle}"
+                            Click="OnRedoClick" ToolTip="重做 (Ctrl+Y)" AutomationProperties.Name="重做">
+                        <Viewbox Width="16" Height="16">
+                            <Path Width="16" Height="16" Data="M10.5,3.5 L14,7 L10.5,10.5 M14,7 L6.5,7 A3.75,3.75 0 0 0 6.5,14.5"
+                                  Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.5"
+                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Fill="Transparent" />
+                        </Viewbox>
+                    </Button>
+                    <Button x:Name="ClearButton" Content="清空" Style="{StaticResource OverlayToolbarButtonStyle}"
+                            Click="OnClearClick" ToolTip="清除所有標註（可復原）" AutomationProperties.Name="清空標註" />
+                </StackPanel>
 
                 <Border Width="1" Margin="6,4" Background="#33FFFFFF" />
 
@@ -282,6 +304,30 @@
                         Click="OnCaptureClick" ToolTip="擷取含標註的全螢幕畫面並複製" AutomationProperties.Name="截圖" />
             </StackPanel>
         </StackPanel>
+        </Border>
+
+        <Border x:Name="HandleRoot"
+                Visibility="Collapsed"
+                Opacity="0.8"
+                Background="{DynamicResource ToolbarBrush}"
+                BorderBrush="{DynamicResource ToolbarBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Cursor="Hand"
+                ToolTip="移到這裡展開標註工具列"
+                AutomationProperties.Name="展開標註工具列"
+                MouseLeftButtonDown="OnHandleMouseDown">
+            <Border.Effect>
+                <DropShadowEffect BlurRadius="10" ShadowDepth="1" Opacity="0.4" Color="#000000" />
+            </Border.Effect>
+            <Viewbox Width="10" Height="10">
+                <Path x:Name="HandleChevron" Width="10" Height="10" Stretch="Uniform"
+                      Data="M1.5,3 L5,6.5 L8.5,3"
+                      Stroke="{DynamicResource ToolbarTextBrush}" StrokeThickness="1.6"
+                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                      Fill="Transparent"
+                      RenderTransformOrigin="0.5,0.5" />
+            </Viewbox>
         </Border>
     </Grid>
 </Window>

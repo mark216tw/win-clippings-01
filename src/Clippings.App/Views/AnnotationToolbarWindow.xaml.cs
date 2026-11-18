@@ -5,23 +5,42 @@ using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Clippings.App.Services;
+using Clippings.Core.Editing;
+using Clippings.Core.Helpers;
 using Clippings.Core.Models;
 using Clippings.Platform.Display;
 using Clippings.Platform.Interop;
+using Microsoft.Win32;
 using SkiaSharp;
 
 namespace Clippings.App.Views;
 
 public partial class AnnotationToolbarWindow : Window
 {
-    private static readonly string[] BackdropNames = ["跟隨畫面", "白板", "黑板"];
+    private static readonly string[] BackdropNames = ["透明", "白板", "黑板"];
+
+    private const double SnapThresholdDip = 16;
+    private const double HandleThickness = 12;
+    private const double HandleLength = 96;
 
     private readonly ScreenAnnotationService _service;
     private readonly MonitorService _monitors;
+    private readonly DispatcherTimer _autoHideTimer;
     private bool _colorPopupClosedByLightDismiss;
     private bool _updating;
     private bool _ready;
+    private bool _hasLoaded;
+    private bool _collapsed;
+    private bool _dragging;
+    private bool _captureSuspended;
+    private AnnotationDockEdge _dockEdge = AnnotationDockEdge.None;
+    private PixelRect _dockWorkArea = PixelRect.Empty;
+    private double _dockDpi = 96;
+    private double _dockOffsetRatio = 0.5;
+    private double _expandedWidthDip;
+    private double _expandedHeightDip;
 
     public AnnotationToolbarWindow(ScreenAnnotationService service, MonitorService monitors)
     {
@@ -40,7 +59,9 @@ public partial class AnnotationToolbarWindow : Window
             StrokeCombo.Items.Add(6);
             StrokeCombo.Items.Add(8);
             StrokeCombo.Items.Add(12);
-            BackdropCombo.ItemsSource = BackdropNames;
+
+            _autoHideTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(_service.AutoHideSeconds) };
+            _autoHideTimer.Tick += OnAutoHideTick;
 
             _service.ToolStateChanged += OnToolStateChanged;
             _service.Document.Changed += OnDocumentChanged;
@@ -58,16 +79,60 @@ public partial class AnnotationToolbarWindow : Window
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         Handle = new WindowInteropHelper(this).Handle;
-        PositionNearCursor();
+        _hasLoaded = true;
+
+        var restored = false;
+        if (_service.DockEdge != AnnotationDockEdge.None)
+        {
+            var (cursorX, cursorY) = WindowHelper.GetCursorPosition();
+            var monitor = _monitors.GetMonitorAt(cursorX, cursorY) ?? _monitors.GetPrimaryMonitor();
+            if (monitor is not null)
+            {
+                _dockEdge = _service.DockEdge;
+                _dockWorkArea = monitor.WorkArea;
+                _dockDpi = monitor.Dpi;
+                _dockOffsetRatio = AnnotationDockHelper.NormalizeRatio(_service.DockOffsetRatio);
+                restored = true;
+                ApplyDockLayout();
+            }
+        }
+
+        if (!restored)
+        {
+            PositionNearCursor();
+            if (_service.DockEdge != AnnotationDockEdge.None)
+            {
+                _service.UpdateDockState(AnnotationDockEdge.None, _dockOffsetRatio);
+            }
+        }
+
         SyncFromService();
+        SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
+
+        if (restored)
+        {
+            StartAutoHideTimer();
+        }
+
         Activate();
         Focus();
+    }
+
+    protected override void OnDpiChanged(DpiScale oldDpi, DpiScale newDpi)
+    {
+        base.OnDpiChanged(oldDpi, newDpi);
+        if (_hasLoaded)
+        {
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(RefreshDockLayout));
+        }
     }
 
     public IntPtr Handle { get; private set; }
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+        _autoHideTimer.Stop();
         _service.ToolStateChanged -= OnToolStateChanged;
         _service.Document.Changed -= OnDocumentChanged;
     }
@@ -120,16 +185,48 @@ public partial class AnnotationToolbarWindow : Window
                 : _service.StrokeWidth >= 3f ? 4
                 : 2;
 
-            BackdropCombo.SelectedIndex = (int)_service.Backdrop;
+            var backdropIndex = Math.Clamp((int)_service.Backdrop, 0, BackdropNames.Length - 1);
+            BackdropButton.Content = BackdropNames[backdropIndex];
+            BackdropButton.ToolTip = $"標註背景：{BackdropNames[backdropIndex]}（點擊切換）";
             PointerButton.IsChecked = _service.ClickThrough;
+            PinButton.IsChecked = !_service.AutoHideWhenSnapped;
+            UpdateAutoHideInterval();
             EyeVisiblePath.Visibility = _service.StrokesVisible ? Visibility.Visible : Visibility.Collapsed;
             EyeHiddenPath.Visibility = _service.StrokesVisible ? Visibility.Collapsed : Visibility.Visible;
             VisibilityButton.ToolTip = _service.StrokesVisible ? "隱藏所有標註（9、V）" : "顯示所有標註（9、V）";
+            UpdateDockUi();
             UpdateUndoButtons();
         }
         finally
         {
             _updating = false;
+        }
+    }
+
+    private void UpdateDockUi()
+    {
+        var docked = _dockEdge != AnnotationDockEdge.None;
+        PinButton.IsEnabled = docked;
+        PinButton.ToolTip = !docked
+            ? "拖曳工具列到螢幕上緣即可吸附；釘住時不會自動收合"
+            : _service.AutoHideWhenSnapped
+                ? $"未釘住：吸附後 {_service.AutoHideSeconds} 秒自動收合成邊緣把手"
+                : "已釘住：不會自動收合";
+    }
+
+    private void UpdateAutoHideInterval()
+    {
+        var interval = TimeSpan.FromSeconds(_service.AutoHideSeconds);
+        if (_autoHideTimer.Interval == interval)
+        {
+            return;
+        }
+
+        var wasEnabled = _autoHideTimer.IsEnabled;
+        _autoHideTimer.Interval = interval;
+        if (wasEnabled)
+        {
+            _autoHideTimer.Start();
         }
     }
 
@@ -165,6 +262,268 @@ public partial class AnnotationToolbarWindow : Window
         _service.ToggleStrokesVisible();
     }
 
+    private void OnPinChecked(object sender, RoutedEventArgs e)
+    {
+        if (_updating || !_ready)
+        {
+            return;
+        }
+
+        _service.SetAutoHideWhenSnapped(false);
+        _autoHideTimer.Stop();
+        UpdateDockUi();
+        if (_collapsed)
+        {
+            Expand(restartTimer: false);
+        }
+    }
+
+    private void OnPinUnchecked(object sender, RoutedEventArgs e)
+    {
+        if (_updating || !_ready)
+        {
+            return;
+        }
+
+        _service.SetAutoHideWhenSnapped(true);
+        UpdateDockUi();
+        StartAutoHideTimer();
+    }
+
+    private void OnWindowMouseEnter(object sender, MouseEventArgs e)
+    {
+        _autoHideTimer.Stop();
+        if (_collapsed)
+        {
+            Expand(restartTimer: false);
+        }
+    }
+
+    private void OnWindowMouseLeave(object sender, MouseEventArgs e) => StartAutoHideTimer();
+
+    private void OnAutoHideTick(object? sender, EventArgs e)
+    {
+        _autoHideTimer.Stop();
+        Collapse();
+    }
+
+    private void StartAutoHideTimer()
+    {
+        _autoHideTimer.Stop();
+
+        if (!_hasLoaded || _collapsed || _dragging || _captureSuspended ||
+            _dockEdge == AnnotationDockEdge.None || !_service.AutoHideWhenSnapped ||
+            IsMouseOver || ColorPopup.IsOpen)
+        {
+            return;
+        }
+
+        _autoHideTimer.Start();
+    }
+
+    private void Collapse()
+    {
+        if (!_hasLoaded || _collapsed || _dragging || _captureSuspended ||
+            _dockEdge == AnnotationDockEdge.None || !_service.AutoHideWhenSnapped ||
+            IsMouseOver || ColorPopup.IsOpen)
+        {
+            return;
+        }
+
+        _autoHideTimer.Stop();
+        _expandedWidthDip = ActualWidth;
+        _expandedHeightDip = ActualHeight;
+        _collapsed = true;
+        ConfigureHandle();
+        BarRoot.Visibility = Visibility.Collapsed;
+        HandleRoot.Visibility = Visibility.Visible;
+        UpdateLayout();
+        ApplyDockLayout();
+    }
+
+    private void Expand(bool restartTimer)
+    {
+        if (!_collapsed)
+        {
+            if (restartTimer)
+            {
+                StartAutoHideTimer();
+            }
+
+            return;
+        }
+
+        _collapsed = false;
+        HandleRoot.Visibility = Visibility.Collapsed;
+        BarRoot.Visibility = Visibility.Visible;
+        UpdateLayout();
+        ApplyDockLayout();
+
+        if (restartTimer)
+        {
+            StartAutoHideTimer();
+        }
+    }
+
+    private void ConfigureHandle()
+    {
+        HandleRoot.Width = HandleLength;
+        HandleRoot.Height = HandleThickness;
+        HandleRoot.CornerRadius = new CornerRadius(0, 0, 8, 8);
+        HandleChevron.RenderTransform = new RotateTransform(0);
+    }
+
+    private void ApplyDockLayout()
+    {
+        if (!IsVisible || _dockEdge == AnnotationDockEdge.None || _dockWorkArea.IsEmpty || Handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var scale = _dockDpi / 96.0;
+        var (widthDip, heightDip) = GetTargetSizeDip();
+        var width = (int)Math.Round(widthDip * scale);
+        var height = (int)Math.Round(heightDip * scale);
+        if (width <= 0 || height <= 0)
+        {
+            return;
+        }
+
+        var bounds = AnnotationDockHelper.ComputeBounds(
+            _dockWorkArea,
+            width,
+            height,
+            _dockEdge,
+            _dockOffsetRatio);
+        if (bounds.IsEmpty)
+        {
+            return;
+        }
+
+        Left = bounds.X * 96.0 / _dockDpi;
+        Top = bounds.Y * 96.0 / _dockDpi;
+        WindowHelper.SetPhysicalBounds(Handle, bounds);
+        _service.EnsureToolbarOnTop();
+    }
+
+    private (double Width, double Height) GetTargetSizeDip()
+    {
+        if (_collapsed)
+        {
+            return (HandleLength, HandleThickness);
+        }
+
+        return _expandedWidthDip > 1 && _expandedHeightDip > 1
+            ? (_expandedWidthDip, _expandedHeightDip)
+            : (ActualWidth, ActualHeight);
+    }
+
+    private void ApplySnapAfterDrag()
+    {
+        if (!TryGetWindowBounds(out var window))
+        {
+            return;
+        }
+
+        var monitor = _monitors.GetMonitorForRect(window) ?? _monitors.GetPrimaryMonitor();
+        if (monitor is null)
+        {
+            ClearDock();
+            return;
+        }
+
+        var scale = monitor.Dpi / 96.0;
+        var threshold = (int)Math.Round(SnapThresholdDip * scale);
+        var edge = AnnotationDockHelper.DetectEdge(window, monitor.WorkArea, threshold);
+        if (edge == AnnotationDockEdge.None)
+        {
+            ClearDock();
+            return;
+        }
+
+        _dockEdge = edge;
+        _dockWorkArea = monitor.WorkArea;
+        _dockDpi = monitor.Dpi;
+        _dockOffsetRatio = AnnotationDockHelper.ComputeOffsetRatio(window, monitor.WorkArea, edge);
+        _service.UpdateDockState(_dockEdge, _dockOffsetRatio);
+        UpdateDockUi();
+        ApplyDockLayout();
+        StartAutoHideTimer();
+    }
+
+    private void ClearDock()
+    {
+        _autoHideTimer.Stop();
+        _dockEdge = AnnotationDockEdge.None;
+        _dockWorkArea = PixelRect.Empty;
+        _service.UpdateDockState(AnnotationDockEdge.None, _dockOffsetRatio);
+        UpdateDockUi();
+
+        if (_collapsed)
+        {
+            Expand(restartTimer: false);
+        }
+    }
+
+    private bool TryGetWindowBounds(out PixelRect bounds)
+    {
+        bounds = PixelRect.Empty;
+        if (Handle == IntPtr.Zero || !NativeMethods.GetWindowRect(Handle, out var rect))
+        {
+            return false;
+        }
+
+        bounds = new PixelRect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top);
+        return !bounds.IsEmpty;
+    }
+
+    public void RefreshDockLayout()
+    {
+        if (!_hasLoaded)
+        {
+            return;
+        }
+
+        _autoHideTimer.Stop();
+
+        if (_dockEdge != AnnotationDockEdge.None)
+        {
+            _ = TryGetWindowBounds(out var window);
+            var monitor = _monitors.GetMonitorForRect(window) ?? _monitors.GetPrimaryMonitor();
+            if (monitor is null)
+            {
+                ClearDock();
+                return;
+            }
+
+            _dockWorkArea = monitor.WorkArea;
+            _dockDpi = monitor.Dpi;
+            ApplyDockLayout();
+        }
+
+        StartAutoHideTimer();
+    }
+
+    public void SuspendAutoHide()
+    {
+        _captureSuspended = true;
+        _autoHideTimer.Stop();
+    }
+
+    public void ResumeAutoHide()
+    {
+        _captureSuspended = false;
+        if (_collapsed)
+        {
+            _ = Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(ApplyDockLayout));
+        }
+
+        StartAutoHideTimer();
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+        => _ = Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(RefreshDockLayout));
+
     private void OnBarMouseDown(object sender, MouseButtonEventArgs e)
     {
         if (e.ChangedButton != MouseButton.Left ||
@@ -175,7 +534,49 @@ public partial class AnnotationToolbarWindow : Window
         }
 
         e.Handled = true;
-        DragMove();
+        BeginDrag();
+        try
+        {
+            DragMove();
+        }
+        finally
+        {
+            EndDrag();
+        }
+    }
+
+    private void OnHandleMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ChangedButton != MouseButton.Left || Mouse.LeftButton != MouseButtonState.Pressed)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        Expand(restartTimer: true);
+        Activate();
+        Focus();
+    }
+
+    private void BeginDrag()
+    {
+        _dragging = true;
+        _autoHideTimer.Stop();
+        if (_collapsed)
+        {
+            Expand(restartTimer: false);
+        }
+        else
+        {
+            _expandedWidthDip = ActualWidth;
+            _expandedHeightDip = ActualHeight;
+        }
+    }
+
+    private void EndDrag()
+    {
+        _dragging = false;
+        ApplySnapAfterDrag();
     }
 
     private static bool IsInteractiveControl(DependencyObject? source)
@@ -201,12 +602,17 @@ public partial class AnnotationToolbarWindow : Window
         }
 
         ColorPopup.IsOpen = !ColorPopup.IsOpen;
+        if (ColorPopup.IsOpen)
+        {
+            _autoHideTimer.Stop();
+        }
     }
 
     private void OnColorPopupClosed(object? sender, EventArgs e)
     {
         _colorPopupClosedByLightDismiss = true;
         Dispatcher.BeginInvoke(() => _colorPopupClosedByLightDismiss = false);
+        StartAutoHideTimer();
     }
 
     private void OnColorChecked(object sender, RoutedEventArgs e)
@@ -236,14 +642,15 @@ public partial class AnnotationToolbarWindow : Window
         _service.SetStrokeWidth(width);
     }
 
-    private void OnBackdropChanged(object sender, SelectionChangedEventArgs e)
+    private void OnBackdropClick(object sender, RoutedEventArgs e)
     {
-        if (_updating || !_ready || BackdropCombo.SelectedIndex < 0)
+        if (_updating || !_ready)
         {
             return;
         }
 
-        _service.SetBackdrop((AnnotationBackdrop)BackdropCombo.SelectedIndex);
+        var next = (AnnotationBackdrop)(((int)_service.Backdrop + 1) % BackdropNames.Length);
+        _service.SetBackdrop(next);
     }
 
     private void OnPointerChecked(object sender, RoutedEventArgs e)
@@ -292,7 +699,15 @@ public partial class AnnotationToolbarWindow : Window
         }
 
         e.Handled = true;
-        DragMove();
+        BeginDrag();
+        try
+        {
+            DragMove();
+        }
+        finally
+        {
+            EndDrag();
+        }
     }
 
     private void OnKeyDown(object sender, KeyEventArgs e)

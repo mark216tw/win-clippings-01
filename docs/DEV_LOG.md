@@ -4,6 +4,123 @@
 
 ---
 
+## 2026-11-18 - 設定頁整理與背景點擊切換（v1.34.0）
+
+### 目標
+
+簡化螢幕標註設定：移除與工具列圖釘重複的釘住選項，讓自動收合秒數可獨立調整；調整設定頁區塊順序，並把工具列背景改為較直覺的點擊循環切換。
+
+### 變更
+
+- `App/Views/SettingsPage.xaml`：移除「吸附螢幕上緣後釘住工具列」選項；「儲存」卡片移到「螢幕標註」卡片之前；自動收合秒數說明改為吸附上緣後生效。
+- `App/Views/SettingsPage.xaml.cs`：移除圖釘與秒數的連動及事件處理；儲存設定時不再覆寫 `AutoHideWhenSnapped`，改由工具列圖釘於結束標註時記住；髒值快照移除釘住欄位；背景選項文字改為「透明」。
+- `App/Views/AnnotationToolbarWindow.xaml(.cs)`：背景 ComboBox 改為按鈕，點擊依序循環透明／白板／黑板並更新提示文字；`BackdropNames` 同步改為「透明」。
+- 版本更新為 1.34.0。
+
+### 問題與解法
+
+- 移除設定頁的釘住選項後，`AutoHideWhenSnapped` 仍保留在設定模型中供工具列使用；設定頁不再寫入，避免存檔時蓋掉工具列當下狀態。
+
+### 待辦
+
+- 需實機確認背景按鈕循環切換時工具列寬度不跳動，且透明背景仍可正常點擊穿透。
+
+---
+
+## 2026-11-18 - 吸附只保留上緣、中鍵改回單擊（v1.33.0）
+
+### 目標
+
+依使用者回饋，標註工具列只提供螢幕上緣吸附、仍可自由拖曳；舊的左／右緣吸附設定直接取消。中鍵連點兩下切換游標模式無效，改回單擊切換並強化鉤子可靠性。
+
+### 變更
+
+- `Core/Helpers/AnnotationDockHelper.cs`：`DetectEdge` 只判斷上緣；`ComputeBounds`／`ComputeOffsetRatio` 只處理 Top；新增 `NormalizeEdge`（僅保留 Top，其餘轉 None）；移除未使用的 `ComputeHandleBounds`。
+- `App/Services/ScreenAnnotationService.cs`：載入設定與 `UpdateDockState` 改用 `NormalizeEdge`，舊左右吸附自動取消；中鍵事件更名為 `MiddleClick`，切換前確認標註仍在進行；鉤子安裝成功記 Information 日誌。
+- `Platform/Interop/MiddleClickHook.cs`：改回收到 `WM_MBUTTONDOWN` 立即觸發；不再過濾 injected 事件；改在專用背景執行緒安裝 `WH_MOUSE_LL` 並自行跑 `GetMessage` 迴圈，`Dispose` 以 `WM_QUIT` 結束執行緒後卸載鉤子。
+- `Platform/Interop/NativeMethods.cs`：新增 `Msg`、`GetMessage`／`TranslateMessage`／`DispatchMessage`／`PostThreadMessage`／`GetCurrentThreadId` 與 `WM_QUIT`；移除不再使用的 `LLMHF_INJECTED`。
+- `App/Views/AnnotationToolbarWindow.xaml(.cs)`：移除垂直版面、分隔線方向切換與把手旋轉；把手固定為上緣水平標籤；提示文字只提上緣。
+- `App/Views/SettingsPage.xaml`：中鍵選項改為「單擊切換」，圖釘說明改為上緣。
+- `tests/Clippings.Core.Tests/AnnotationDockHelperTests.cs`：改為上緣-only 測試，新增 `NormalizeEdge` 與左右回傳 None／Empty 的案例。
+- 版本更新為 1.33.0。
+
+### 問題與解法
+
+- 中鍵雙擊無效可能來自 400 ms 門檻過嚴、injected 事件被忽略，或 `WH_MOUSE_LL` 安裝在 WPF UI 執行緒時因回呼超時被系統靜默移除（Windows 不會回報）。改回單擊可移除時間門檻，專用執行緒可避免被 UI 工作拖累。
+- 移除左右吸附後，舊設定檔仍可能含 `Left`／`Right`；保留列舉值僅供反序列化相容，載入時由 `NormalizeEdge` 轉為 `None`。
+
+### 待辦
+
+- 需實機驗證單擊中鍵在上緣吸附、自動收合與截圖流程中都能切換，且不會被其他軟體的中鍵操作干擾。
+- 中鍵在標註期間仍會被全域鉤子吞掉；若造成困擾可在設定頁關閉。
+
+---
+
+## 2026-11-18 - 圖釘語意、左右垂直面板、中鍵雙擊與可調自動收合（v1.32.0）
+
+### 目標
+
+讓圖釘符合「釘住＝不自動隱藏」的直覺，吸附左右緣時工具列自動轉為垂直，中鍵改為連點兩下才切換以降低誤觸，並讓自動收合秒數可設定。
+
+### 變更
+
+- `Core/Models/AnnotationSettings.cs`：`AutoHideWhenSnapped` 預設改為關閉（代表預設釘住）；新增 `AutoHideSeconds`（預設 10）。
+- `App/Services/ScreenAnnotationService.cs`：載入／保存自動收合秒數；新增 `SetAutoHideSeconds`；標註進行中儲存設定時即時更新秒數；中鍵改接 `MiddleDoubleClick`。
+- `Platform/Interop/MiddleClickHook.cs`：移除 250 ms debounce，改為 400 ms 內第二次中鍵才觸發；仍吞掉中鍵 down／up 與忽略 injected 事件。
+- `App/Views/AnnotationToolbarWindow.xaml(.cs)`：圖釘改為 `PinButton`，勾選＝不自動收合；新增水平／垂直版面切換，左右吸附時工具、線寬、背景與動作群組垂直堆疊，分隔線改橫線；定時器間隔改讀取服務秒數。
+- `App/Views/SettingsPage.xaml(.cs)`：螢幕標註卡改為「釘住工具列」CheckBox 與自動收合秒數下拉（3/5/10/15/30/60）；納入儲存快照與變更偵測。
+- `tests/Clippings.Core.Tests/AppSettingsTests.cs`：更新預設值並補上秒數深拷貝測試。
+- 版本更新為 1.32.0。
+
+### 問題與解法
+
+- 舊有 250 ms debounce 會吃掉第二次中鍵，導致無法判斷雙擊：改以首次 down 記錄時間，第二次在 400 ms 內才觸發。
+- 垂直版面若沿用原本尺寸快取會定位錯誤：切換方向時清除展開尺寸、重新 `UpdateLayout` 後再套用吸附位置。
+- 圖釘與舊設定欄位方向相反：儲存仍沿用 `AutoHideWhenSnapped`，UI 與工具列以反轉方式呈現，既有設定檔不需遷移。
+
+### 待辦
+
+- 需實機驗證左右吸附的垂直版面高度是否適合較小螢幕、雙擊中鍵在不同滑鼠與觸控板上的手感，以及設定頁修改秒數對進行中標註的即時套用。
+- 單擊中鍵在標註期間仍會被吞掉，因此不會有單擊行為；可改用 `0`／`C` 或工具列游標按鈕。
+
+---
+
+## 2026-11-18 - 螢幕標註邊緣吸附、自動收合與中鍵切換（v1.31.0）
+
+### 目標
+
+讓螢幕標註工具列可吸附螢幕上／左／右緣，吸附後固定 10 秒自動收合成邊緣把手，滑鼠移入時展開；並支援以滑鼠中鍵在游標模式與工具模式間切換，同時提供可發現性與防誤觸設定。
+
+### 變更
+
+- `Core/Models/AnnotationDockEdge.cs`（新增）：`None`／`Top`／`Left`／`Right`，既有設定值不受影響。
+- `Core/Helpers/AnnotationDockHelper.cs`（新增）：以實際像素處理吸附邊判定、沿邊比例、把手與工具列位置計算、比例正規化與工作區夾取。
+- `Core/Models/AnnotationSettings.cs`：新增 `DockEdge`、`DockOffsetRatio`、`AutoHideWhenSnapped`、`MiddleClickToggle`（後兩者預設開啟）；`Clone()` 仍為 `MemberwiseClone` 即可深拷貝。
+- `Platform/Interop/NativeMethods.cs`：新增 `WH_MOUSE_LL`、`WM_MBUTTON*`、`SetWindowsHookEx`／`UnhookWindowsHookEx`／`CallNextHookEx` 與 `MSLLHOOKSTRUCT`。
+- `Platform/Interop/MiddleClickHook.cs`（新增）：標註會期內的全域中鍵鉤子，吞掉中鍵 down／up、忽略 injected 事件、250 ms debounce，卸載於 `Dispose()`；事件例外交由 `ErrorHandler` 記錄。
+- `App/Services/ScreenAnnotationService.cs`：保存／還原四個新設定；會期開始時依設定安裝中鍵鉤子；中鍵切換 `ClickThrough`；`UpdateDockState` 供工具列回報吸附狀態；`PrepareForCapture`／`RestoreAfterCapture` 通知工具列暫停與恢復自動收合。
+- `App/Views/AnnotationToolbarWindow.xaml(.cs)`：新增邊緣把手與自動收合 ToggleButton；拖曳結束後以 `WorkArea` 判定吸附（16 DIP 門檻），拖離即解除；10 秒 `DispatcherTimer` 收合，滑鼠在工具列上、Popup 開啟、拖曳中或截圖流程中暫停；展開不呼叫 `Activate()`；`DpiChanged` 與 `DisplaySettingsChanged` 重新以目前螢幕工作區定位。
+- `App/Views/SettingsPage.xaml(.cs)`：螢幕標註卡新增自動收合與中鍵切換兩個 CheckBox，並納入儲存快照與變更偵測。
+- `tests/Clippings.Core.Tests/AnnotationDockHelperTests.cs`（新增）：吸附邊界、角落優先序、負座標螢幕、比例往返與夾取、把手尺寸、視窗大於工作區等測試；`AppSettingsTests` 補上新預設值、深拷貝與列舉值穩定性。
+- 版本更新為 1.31.0。
+
+### 問題與解法
+
+- 完全隱藏後收不到 hover：改為收合成 12×96 DIP 的邊緣把手，保留可 hover 的實體目標，且不需要全域游標輪詢。
+- 游標模式 overlay 為 `WS_EX_TRANSPARENT`，收不到中鍵：改在會期內安裝 `WH_MOUSE_LL`，並吞掉中鍵事件避免瀏覽器自動捲動；鉤子只在使用者啟用時安裝。
+- 自動收合會與 Popup、拖曳、截圖流程衝突：計時器在這些狀態下暫停；截圖前後由服務呼叫 `SuspendAutoHide`／`ResumeAutoHide`。
+- 展開工具列若呼叫 `Activate()` 會搶走底層應用程式焦點：改為內容切換與 `SetPhysicalBounds`，僅在使用者點擊把手時才 `Activate()`。
+- 吸附與 DPI 換算：吸附判定與定位以 `GetWindowRect`／`SetPhysicalBounds` 的實際像素為準，WPF `Left`／`Top` 僅同步為同一個 DIP 值。
+
+### 待辦
+
+- 需實機驗證：三邊吸附與解除、10 秒收合、hover 展開不搶焦點、中鍵在瀏覽器與文字編輯器中的切換、Popup／繪圖期間不倒數、截圖前後把手狀態還原。
+- 混合 DPI 多螢幕尚未實測；目前沿用既有座標換算慣例。
+- 重啟標註時以游標所在螢幕還原吸附位置，未記錄原本的螢幕裝置名稱。
+- 中鍵鉤子假設由 UI 執行緒啟動（目前熱鍵、系統匣、命令列與主畫面皆符合）。
+
+---
+
 ## 2026-11-18 - 設定頁「關於」與「結束」區塊對調（v1.30.4）
 
 ### 目標

@@ -76,6 +76,11 @@ public class AppSettingsTests
         Assert.Equal(6f, annotation.StrokeWidth);
         Assert.False(annotation.ClickThrough);
         Assert.Equal(AnnotationBackdrop.Screen, annotation.Backdrop);
+        Assert.Equal(AnnotationDockEdge.None, annotation.DockEdge);
+        Assert.Equal(0.5, annotation.DockOffsetRatio);
+        Assert.False(annotation.AutoHideWhenSnapped);
+        Assert.Equal(10, annotation.AutoHideSeconds);
+        Assert.True(annotation.MiddleClickToggle);
     }
 
     [Fact]
@@ -88,11 +93,21 @@ public class AppSettingsTests
         clone.Annotation.StrokeWidth = 12f;
         clone.Annotation.ClickThrough = true;
         clone.Annotation.Backdrop = AnnotationBackdrop.Whiteboard;
+        clone.Annotation.DockEdge = AnnotationDockEdge.Right;
+        clone.Annotation.DockOffsetRatio = 0.75;
+        clone.Annotation.AutoHideWhenSnapped = true;
+        clone.Annotation.AutoHideSeconds = 30;
+        clone.Annotation.MiddleClickToggle = false;
 
         Assert.Equal(AnnotationTool.Pen, settings.Annotation.Tool);
         Assert.Equal(6f, settings.Annotation.StrokeWidth);
         Assert.False(settings.Annotation.ClickThrough);
         Assert.Equal(AnnotationBackdrop.Screen, settings.Annotation.Backdrop);
+        Assert.Equal(AnnotationDockEdge.None, settings.Annotation.DockEdge);
+        Assert.Equal(0.5, settings.Annotation.DockOffsetRatio);
+        Assert.False(settings.Annotation.AutoHideWhenSnapped);
+        Assert.Equal(10, settings.Annotation.AutoHideSeconds);
+        Assert.True(settings.Annotation.MiddleClickToggle);
     }
 
     [Fact]
@@ -169,6 +184,15 @@ public class AppSettingsTests
         Assert.Equal(10, (int)AnnotationTool.Pan);
         Assert.Equal(11, (int)AnnotationTool.Laser);
         Assert.Equal(12, (int)AnnotationTool.Eraser);
+    }
+
+    [Fact]
+    public void AnnotationDockEdge_ExistingValuesRemainStable()
+    {
+        Assert.Equal(0, (int)AnnotationDockEdge.None);
+        Assert.Equal(1, (int)AnnotationDockEdge.Top);
+        Assert.Equal(2, (int)AnnotationDockEdge.Left);
+        Assert.Equal(3, (int)AnnotationDockEdge.Right);
     }
 
     [Fact]

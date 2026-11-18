@@ -71,7 +71,8 @@ public partial class SettingsPage : UserControl
         ThemeCombo.DisplayMemberPath = nameof(ThemeOption.DisplayName);
         ThemeCombo.SelectedValuePath = nameof(ThemeOption.Value);
         FormatCombo.ItemsSource = new[] { "PNG", "JPEG" };
-        AnnotateBackdropCombo.ItemsSource = new[] { "跟隨畫面", "白板", "黑板" };
+        AnnotateBackdropCombo.ItemsSource = new[] { "透明", "白板", "黑板" };
+        AnnotateAutoHideSecondsCombo.ItemsSource = new[] { 3, 5, 10, 15, 30, 60 };
         RecordingFrameRateCombo.ItemsSource = new[] { 30, 60 };
         RecordingDelayCombo.ItemsSource = new[] { 0, 5, 10, 20, 30 };
         RecordingBitrateCombo.ItemsSource = RecordingBitrateOptions;
@@ -110,6 +111,10 @@ public partial class SettingsPage : UserControl
             MagnifierCheck.IsChecked = settings.ShowMagnifier;
             CaptureCursorCheck.IsChecked = settings.CaptureCursor;
             AnnotateClickThroughCheck.IsChecked = settings.Annotation.ClickThrough;
+            AnnotateAutoHideSecondsCombo.SelectedItem = settings.Annotation.AutoHideSeconds is 3 or 5 or 10 or 15 or 30 or 60
+                ? settings.Annotation.AutoHideSeconds
+                : 10;
+            AnnotateMiddleClickCheck.IsChecked = settings.Annotation.MiddleClickToggle;
             AnnotateBackdropCombo.SelectedIndex = (int)settings.Annotation.Backdrop;
             RecordingDirBox.Text = settings.Recording.OutputDirectory;
             RecordingFrameRateCombo.SelectedItem = settings.Recording.FrameRate is 30 or 60
@@ -468,6 +473,10 @@ public partial class SettingsPage : UserControl
         settings.Theme = GetSelectedTheme();
         settings.StartWithWindows = StartupCheck.IsChecked == true;
         settings.Annotation.ClickThrough = AnnotateClickThroughCheck.IsChecked == true;
+        settings.Annotation.AutoHideSeconds = AnnotateAutoHideSecondsCombo.SelectedItem is int autoHideSeconds
+            ? autoHideSeconds
+            : 10;
+        settings.Annotation.MiddleClickToggle = AnnotateMiddleClickCheck.IsChecked == true;
         settings.Annotation.Backdrop = AnnotateBackdropCombo.SelectedIndex is >= 0 and <= 2
             ? (AnnotationBackdrop)AnnotateBackdropCombo.SelectedIndex
             : AnnotationBackdrop.Screen;
@@ -534,6 +543,8 @@ public partial class SettingsPage : UserControl
         GetSelectedTheme(),
         StartupCheck.IsChecked == true,
         AnnotateClickThroughCheck.IsChecked == true,
+        AnnotateAutoHideSecondsCombo.SelectedItem is int annotateAutoHideSeconds ? annotateAutoHideSeconds : 10,
+        AnnotateMiddleClickCheck.IsChecked == true,
         AnnotateBackdropCombo.SelectedIndex is >= 0 and <= 2
             ? (AnnotationBackdrop)AnnotateBackdropCombo.SelectedIndex
             : AnnotationBackdrop.Screen,
@@ -604,6 +615,8 @@ public partial class SettingsPage : UserControl
         AppTheme Theme,
         bool StartWithWindows,
         bool AnnotateClickThrough,
+        int AnnotateAutoHideSeconds,
+        bool AnnotateMiddleClick,
         AnnotationBackdrop AnnotateBackdrop,
         string RecordingDirectory,
         int RecordingFrameRate,

@@ -53,6 +53,11 @@ public static class NativeMethods
 
     public static readonly IntPtr HwndTopmost = new(-1);
 
+    public const int WhMouseLl = 14;
+    public const int WmMButtonDown = 0x0207;
+    public const int WmMButtonUp = 0x0208;
+    public const uint WmQuit = 0x0012;
+
     public const int GwlExStyle = -20;
     public const long WsExTransparent = 0x00000020L;
     public const long WsExToolWindow = 0x00000080L;
@@ -132,7 +137,31 @@ public static class NativeMethods
         public uint Colors;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MouseLlHookStruct
+    {
+        public Point Point;
+        public uint MouseData;
+        public uint Flags;
+        public uint Time;
+        public IntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    public struct Msg
+    {
+        public IntPtr Hwnd;
+        public uint Message;
+        public IntPtr WParam;
+        public IntPtr LParam;
+        public uint Time;
+        public Point Point;
+        public uint Private;
+    }
+
     public delegate bool MonitorEnumProc(IntPtr hMonitor, IntPtr hdcMonitor, ref Rect monitorRect, IntPtr data);
+
+    public delegate IntPtr LowLevelMouseProc(int code, IntPtr wParam, IntPtr lParam);
 
     public delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr data);
 
@@ -200,6 +229,36 @@ public static class NativeMethods
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern IntPtr SetWindowsHookEx(int idHook, LowLevelMouseProc callback, IntPtr module, uint threadId);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool UnhookWindowsHookEx(IntPtr hook);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr CallNextHookEx(IntPtr hook, int code, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+    public static extern IntPtr GetModuleHandle(string? moduleName);
+
+    [DllImport("kernel32.dll")]
+    public static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    public static extern int GetMessage(out Msg message, IntPtr hWnd, uint filterMin, uint filterMax);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool TranslateMessage(ref Msg message);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr DispatchMessage(ref Msg message);
+
+    [DllImport("user32.dll", SetLastError = true)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool PostThreadMessage(uint threadId, uint message, IntPtr wParam, IntPtr lParam);
 
     [DllImport("user32.dll", SetLastError = true)]
     [return: MarshalAs(UnmanagedType.Bool)]

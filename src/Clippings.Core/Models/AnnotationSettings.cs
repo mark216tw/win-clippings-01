@@ -12,5 +12,15 @@ public sealed class AnnotationSettings
 
     public AnnotationBackdrop Backdrop { get; set; } = AnnotationBackdrop.Screen;
 
+    public AnnotationDockEdge DockEdge { get; set; } = AnnotationDockEdge.None;
+
+    public double DockOffsetRatio { get; set; } = 0.5;
+
+    public bool AutoHideWhenSnapped { get; set; }
+
+    public int AutoHideSeconds { get; set; } = 10;
+
+    public bool MiddleClickToggle { get; set; } = true;
+
     public AnnotationSettings Clone() => (AnnotationSettings)MemberwiseClone();
 }

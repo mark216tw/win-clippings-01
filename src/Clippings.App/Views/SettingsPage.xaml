@@ -118,25 +118,6 @@
 
             <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
                 <StackPanel>
-                    <TextBlock Text="螢幕標註" Style="{StaticResource SectionTitleStyle}" />
-
-                    <TextBlock Text="開始標註時套用；結束標註時會記住當時的狀態。"
-                               Style="{StaticResource CaptionStyle}"
-                               Margin="0,10,0,0" />
-
-                    <CheckBox x:Name="AnnotateClickThroughCheck"
-                              Content="預設使用游標模式（點擊穿透到底下的應用程式）"
-                              Margin="0,12,0,0" />
-
-                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
-                        <TextBlock Text="背景" VerticalAlignment="Center" Margin="0,0,10,0" />
-                        <ComboBox x:Name="AnnotateBackdropCombo" Width="140" />
-                    </StackPanel>
-                </StackPanel>
-            </Border>
-
-            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
-                <StackPanel>
                     <TextBlock Text="儲存" Style="{StaticResource SectionTitleStyle}" />
 
                     <TextBlock Text="自動存檔資料夾" Margin="0,14,0,6" />
@@ -194,6 +175,38 @@
                                    VerticalAlignment="Center"
                                    TextWrapping="Wrap" />
                     </DockPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource CardBorderStyle}" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="螢幕標註" Style="{StaticResource SectionTitleStyle}" />
+
+                    <TextBlock Text="開始標註時套用；結束標註時會記住當時的狀態。"
+                               Style="{StaticResource CaptionStyle}"
+                               Margin="0,10,0,0" />
+
+                    <CheckBox x:Name="AnnotateClickThroughCheck"
+                              Content="預設使用游標模式（點擊穿透到底下的應用程式）"
+                              Margin="0,12,0,0" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="自動收合秒數" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="AnnotateAutoHideSecondsCombo" Width="100" />
+                        <TextBlock Text="秒（吸附螢幕上緣後生效）"
+                                   Style="{StaticResource CaptionStyle}"
+                                   Margin="8,0,0,0"
+                                   VerticalAlignment="Center" />
+                    </StackPanel>
+
+                    <CheckBox x:Name="AnnotateMiddleClickCheck"
+                              Content="標註期間以滑鼠中鍵切換游標模式與工具模式"
+                              Margin="0,8,0,0" />
+
+                    <StackPanel Orientation="Horizontal" Margin="0,12,0,0">
+                        <TextBlock Text="背景" VerticalAlignment="Center" Margin="0,0,10,0" />
+                        <ComboBox x:Name="AnnotateBackdropCombo" Width="140" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 
