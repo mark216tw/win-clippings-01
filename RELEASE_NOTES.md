@@ -1,3 +1,27 @@
+# Clippings 剪貼簿 2 1.34.1
+
+## 啟動更快、常駐更省記憶體
+
+- 開機自動啟動與冷啟動不再預先載入擷取、錄影、標註與影像處理元件，啟動更輕快。
+- 主視窗關閉到系統匣時會釋放編輯器佔用的記憶體，重新開啟時自動還原未儲存的頁籤。
+- 擷取、螢幕標註與錄影結束後會自動回收記憶體，長時間常駐更省資源。
+- 錄影支援檢查改為快取，平常不初始化錄影元件，開始錄影時才啟用。
+- 設定與影像載入流程減少不必要的複製與配置，進一步降低啟動與執行時的記憶體用量。
+
+## 下載
+
+- `win-x64`：適用 Intel 或 AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+僅提供 framework-dependent ZIP，請解壓縮後使用。需安裝 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)；解壓縮後執行 `Clippings.App.New.exe`。
+
+## SHA-256
+
+- `Clippings-1.34.1-win-x64-framework-dependent.zip`：`15A6599B899138926719CDFC782A72A394EDDBB0277AE7343FC14622651DB900`
+- `Clippings-1.34.1-win-arm64-framework-dependent.zip`：`4B9D4EBB1ED04714853ADAE687BBEE39079C0DE5AB439490D71714722061157A`
+
+---
+
 # Clippings 剪貼簿 2 1.34.0
 
 ## 設定頁整理與背景點擊切換

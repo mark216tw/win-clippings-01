@@ -18,8 +18,8 @@ public static class ImageCodec
 
     public static SKBitmap Decode(byte[] bytes)
     {
-        using var data = SKData.CreateCopy(bytes);
-        var bitmap = SKBitmap.Decode(data);
+        ArgumentNullException.ThrowIfNull(bytes);
+        var bitmap = SKBitmap.Decode(bytes);
         return bitmap ?? throw new InvalidOperationException("無法解碼影像資料。");
     }
 
@@ -35,7 +35,11 @@ public static class ImageCodec
         }
     }
 
-    public static SKBitmap Load(string path) => Decode(File.ReadAllBytes(path));
+    public static SKBitmap Load(string path)
+    {
+        var bitmap = SKBitmap.Decode(path);
+        return bitmap ?? throw new InvalidOperationException("無法解碼影像資料。");
+    }
 
     public static SKBitmap Crop(SKBitmap source, PixelRect rect)
     {

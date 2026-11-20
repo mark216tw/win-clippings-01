@@ -201,6 +201,12 @@ public sealed class CaptureCoordinator
                 mainWindow.Show();
                 mainWindow.Activate();
             }
+            else if (mainWindow?.IsVisible != true)
+            {
+                MemoryTrimmer.ScheduleTrim(
+                    delayMilliseconds: 500,
+                    shouldTrim: () => !_busy && App.Current?.IsMainWindowVisible != true);
+            }
         }
     }
 
@@ -370,6 +376,10 @@ public sealed class CaptureCoordinator
             {
                 crop.Dispose();
             }
+
+            crops.Clear();
+            bitmapSources.Clear();
+            overlays.Clear();
         }
     }
 
@@ -402,11 +412,7 @@ public sealed class CaptureCoordinator
             }
 
             var createdAt = DateTimeOffset.Now;
-            var (png, hash) = await Task.Run(() =>
-            {
-                var encoded = ImageCodec.Encode(image, ImageFormat.Png);
-                return (encoded, HashUtil.Sha256Hex(encoded));
-            });
+            var png = await Task.Run(() => ImageCodec.Encode(image, ImageFormat.Png));
 
             if (action == OverlayAction.Save)
             {

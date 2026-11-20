@@ -119,7 +119,7 @@ public sealed class RecordingCoordinator
         }
     }
 
-    public bool CanStartRecording => State == RecordingState.Idle && IsSupported && !IsPreparing;
+    public bool CanStartRecording => State == RecordingState.Idle && _recordingService.IsLikelySupported && !IsPreparing;
 
     public async Task StartWithSelectionAsync()
     {
@@ -504,6 +504,7 @@ public sealed class RecordingCoordinator
             stopSource.Dispose();
             RestoreMainWindowIfNeeded();
             StateChanged?.Invoke(this, EventArgs.Empty);
+            MemoryTrimmer.ScheduleTrim(delayMilliseconds: 600, shouldTrim: () => State == RecordingState.Idle);
         }
     }
 

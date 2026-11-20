@@ -38,6 +38,7 @@ public partial class CaptureWorkspacePage : UserControl
     private readonly Task _initialization;
     private List<PendingClosedTab> _pendingClosedTabs = [];
     private WorkspaceTab? _selectedTab;
+    private WorkspaceTab? _suspendedTab;
     private bool _pendingCloseAll;
     private bool _isCommittingPendingClose;
     private bool _suppressSelection;
@@ -98,6 +99,7 @@ public partial class CaptureWorkspacePage : UserControl
     {
         ArgumentNullException.ThrowIfNull(tab);
         await _initialization;
+        _suspendedTab = null;
         if (!_workspace.Tabs.Contains(tab))
         {
             return;
@@ -114,8 +116,37 @@ public partial class CaptureWorkspacePage : UserControl
 
         if (_selectedTab is null && _workspace.Tabs.Count > 0)
         {
-            await SelectTabAsync(_workspace.Tabs[^1]);
+            var target = _suspendedTab is not null && _workspace.Tabs.Contains(_suspendedTab)
+                ? _suspendedTab
+                : _workspace.Tabs[^1];
+            _suspendedTab = null;
+            await SelectTabAsync(target);
         }
+    }
+
+    public void SuspendForTray()
+    {
+        var editor = _editor;
+        if (editor is null || editor.IsDirty)
+        {
+            return;
+        }
+
+        _saveTimer.Stop();
+        _suspendedTab = _selectedTab;
+        _selectedTab = null;
+        _selectionVersion++;
+
+        editor.DocumentChanged -= OnEditorDocumentChanged;
+        editor.SaveAsRequested -= OnEditorSaveAsRequested;
+        editor.OpenImageFromClipboardRequested -= OnEditorOpenImageFromClipboardRequested;
+        editor.OpenImageFileRequested -= OnEditorOpenImageFileRequested;
+        editor.ViewInfoChanged -= OnEditorViewInfoChanged;
+        editor.ReleaseResources();
+
+        EditorHost.Content = null;
+        _editor = null;
+        UpdateEditorInfo();
     }
 
     private void OnWorkspaceTabsChanged(object? sender, NotifyCollectionChangedEventArgs e)

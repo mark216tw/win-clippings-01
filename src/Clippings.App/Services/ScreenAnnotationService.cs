@@ -167,6 +167,7 @@ public sealed class ScreenAnnotationService
         _overlays.Clear();
         _toolbar?.Close();
         _toolbar = null;
+        Document = new AnnotationDocument();
         _monitorSnapshot = [];
         _virtualBounds = PixelRect.Empty;
         _toolbarHiddenForCapture = false;
@@ -174,6 +175,9 @@ public sealed class ScreenAnnotationService
         _magnifierExclusionUnsupported = false;
         _logger.LogInformation("螢幕標註已結束。");
         SessionChanged?.Invoke(this, EventArgs.Empty);
+        MemoryTrimmer.ScheduleTrim(
+            delayMilliseconds: 500,
+            shouldTrim: () => !IsActive && App.Current?.IsMainWindowVisible != true);
     }
 
     public void ToggleStrokesVisible()

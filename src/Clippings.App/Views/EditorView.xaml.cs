@@ -135,6 +135,15 @@ public partial class EditorView : UserControl
         TabBarHost.Content = content;
     }
 
+    public void ClearTabBar() => TabBarHost.Content = null;
+
+    public void ReleaseResources()
+    {
+        ClearImage();
+        ClearTabBar();
+        _image.Release();
+    }
+
     private SKBitmap Bitmap => _image.Bitmap;
 
     public void LoadImage(SKBitmap bitmap)

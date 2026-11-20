@@ -46,7 +46,14 @@ public partial class CaptureOverlayWindow : Window
     private const double HandleSize = 9;
     private const int MinimumSelectionSize = 4;
 
-    private static readonly Brush HandleStroke = new SolidColorBrush(Color.FromRgb(0x2D, 0x6B, 0xF2));
+    private static readonly Brush HandleStroke = CreateFrozenBrush(Color.FromRgb(0x2D, 0x6B, 0xF2));
+
+    private static SolidColorBrush CreateFrozenBrush(Color color)
+    {
+        var brush = new SolidColorBrush(color);
+        brush.Freeze();
+        return brush;
+    }
 
     private readonly SKBitmap _bitmap;
     private readonly BitmapSource _bitmapSource;
@@ -120,6 +127,8 @@ public partial class CaptureOverlayWindow : Window
     private void OnClosed(object? sender, EventArgs e)
     {
         ReleaseMouseCapture();
+        FrozenImage.Source = null;
+        MagnifierImage.Source = null;
 
         if (!_completing)
         {

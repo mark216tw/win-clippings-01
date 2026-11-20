@@ -46,6 +46,7 @@ public partial class MainWindow : Window
         _annotations = annotations;
         _recording.StateChanged += OnRecordingStateChanged;
         _annotations.SessionChanged += OnAnnotationSessionChanged;
+        IsVisibleChanged += OnIsVisibleChanged;
         _recordingTimer = new DispatcherTimer(TimeSpan.FromSeconds(1), DispatcherPriority.Background, OnRecordingTimerTick, Dispatcher);
         _recordingTimer.Stop();
 
@@ -312,6 +313,16 @@ public partial class MainWindow : Window
         }
     }
 
+    private void OnIsVisibleChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        var visible = IsVisible;
+        App.Current?.SetMainWindowVisible(visible);
+        if (visible && _loadedOnce && _currentPageIndex == 0 && _workspacePage is not null)
+        {
+            _ = _workspacePage.ActivateAsync();
+        }
+    }
+
     private void OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
         if (!App.Current.IsExiting)
@@ -323,13 +334,27 @@ public partial class MainWindow : Window
             }
 
             _settingsPage?.StopHotkeyRecording();
-            _ = FlushWorkspaceAsync();
             Hide();
+            _ = SuspendToTrayAsync();
+        }
+    }
+
+    private async Task SuspendToTrayAsync()
+    {
+        await FlushWorkspaceAsync();
+        if (!IsVisible && !App.Current.IsExiting)
+        {
+            _workspacePage?.SuspendForTray();
+            MemoryTrimmer.ScheduleTrim(
+                delayMilliseconds: 400,
+                shouldTrim: () => !App.Current.IsMainWindowVisible && !App.Current.IsExiting);
         }
     }
 
     private void OnClosed(object? sender, EventArgs e)
     {
+        IsVisibleChanged -= OnIsVisibleChanged;
+        App.Current?.SetMainWindowVisible(false);
         _recording.StateChanged -= OnRecordingStateChanged;
         _annotations.SessionChanged -= OnAnnotationSessionChanged;
         _recordingTimer.Stop();

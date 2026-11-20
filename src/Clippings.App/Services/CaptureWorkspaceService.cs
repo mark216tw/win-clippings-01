@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Collections.ObjectModel;
 using Clippings.App.Models;
 using Clippings.App.Strings;
@@ -69,9 +70,12 @@ public sealed class CaptureWorkspaceService
                 {
                     try
                     {
-                        using var codec = SKCodec.Create(path)
-                            ?? throw new InvalidOperationException("無法讀取影像資訊。");
-                        items.Add((path, codec.Info.Width, codec.Info.Height));
+                        if (!TryReadPngDimensions(path, out var width, out var height))
+                        {
+                            throw new InvalidOperationException("無法讀取影像資訊。");
+                        }
+
+                        items.Add((path, width, height));
                     }
                     catch (Exception exception)
                     {
@@ -284,6 +288,37 @@ public sealed class CaptureWorkspaceService
         {
             TryDeleteFile(path);
         }
+    }
+
+    private static bool TryReadPngDimensions(string path, out int width, out int height)
+    {
+        width = 0;
+        height = 0;
+        Span<byte> header = stackalloc byte[24];
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, bufferSize: 64);
+        var read = 0;
+        while (read < header.Length)
+        {
+            var chunk = stream.Read(header[read..]);
+            if (chunk == 0)
+            {
+                return false;
+            }
+
+            read += chunk;
+        }
+
+        // PNG signature (8 bytes) + IHDR length (4 bytes) + "IHDR" (4 bytes) + width (4) + height (4)
+        if (header[0] != 0x89 || header[1] != 0x50 || header[2] != 0x4E || header[3] != 0x47 ||
+            header[4] != 0x0D || header[5] != 0x0A || header[6] != 0x1A || header[7] != 0x0A ||
+            header[12] != (byte)'I' || header[13] != (byte)'H' || header[14] != (byte)'D' || header[15] != (byte)'R')
+        {
+            return false;
+        }
+
+        width = BinaryPrimitives.ReadInt32BigEndian(header.Slice(16, 4));
+        height = BinaryPrimitives.ReadInt32BigEndian(header.Slice(20, 4));
+        return width > 0 && height > 0;
     }
 
     private void TryDeleteFile(string path)

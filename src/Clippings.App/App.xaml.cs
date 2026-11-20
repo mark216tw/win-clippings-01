@@ -47,12 +47,18 @@ public partial class App : Application
     private IReadOnlyList<string> _hotkeyFailures = [];
     private ILogger<App>? _logger;
     private bool _exitRequested;
+    private bool _resourcesLoaded;
+    private volatile bool _mainWindowVisible;
 
     public static bool IsDarkTheme { get; private set; }
 
     public static new App Current => (App)Application.Current;
 
     public bool IsExiting { get; private set; }
+
+    internal bool IsMainWindowVisible => _mainWindowVisible;
+
+    internal void SetMainWindowVisible(bool visible) => _mainWindowVisible = visible;
 
     public AppState? State { get; private set; }
 
@@ -101,8 +107,6 @@ public partial class App : Application
             return;
         }
 
-        LoadApplicationResources();
-
         _provider = BuildServices(_singleInstance);
         _services = _provider;
         _logger = _services.GetRequiredService<ILogger<App>>();
@@ -112,26 +116,12 @@ public partial class App : Application
         }
 
         _notifications = _services.GetRequiredService<TrayNotificationService>();
-
         State = _services.GetRequiredService<AppState>();
-        ThemeManager = _services.GetRequiredService<ThemeService>();
-        _ = LegacyDataCleanup.RunAsync(PathUtil.DefaultDataRoot);
-        Coordinator = _services.GetRequiredService<CaptureCoordinator>();
-        _recording = _services.GetRequiredService<RecordingCoordinator>();
-        _recording.StateChanged += OnRecordingStateChanged;
-        _annotations = _services.GetRequiredService<ScreenAnnotationService>();
-        _annotations.CaptureCoordinator = Coordinator;
-        Coordinator.AnnotationService = _annotations;
-
-        ApplyTheme(State.Settings.Theme);
-
-        StartupRegistrar.SetEnabled(State.Settings.StartWithWindows);
-
-        Coordinator.CaptureAdded += OnCaptureAdded;
         State.SettingsChanged += OnSettingsChanged;
 
         if (!options.HideMainWindow)
         {
+            EnsureApplicationResources();
             EnsureMainWindow().Show();
         }
 
@@ -151,14 +141,98 @@ public partial class App : Application
         _singleInstance.StartListening();
         _singleInstance.ActivationRequested += OnActivationRequested;
 
+        var startWithWindows = State.Settings.StartWithWindows;
+        _ = Task.Run(() =>
+        {
+            StartupRegistrar.SetEnabled(startWithWindows);
+            _ = LegacyDataCleanup.RunAsync(PathUtil.DefaultDataRoot);
+        });
+
         ExecuteStartupCommand(options.Command);
+
+        if (options.HideMainWindow && options.Command == StartupCommand.None)
+        {
+            MemoryTrimmer.ScheduleTrim(
+                delayMilliseconds: 1500,
+                shouldTrim: () => !IsMainWindowVisible && !IsExiting);
+        }
     }
 
-    private static void LoadApplicationResources()
+    private void EnsureApplicationResources()
     {
+        if (_resourcesLoaded)
+        {
+            return;
+        }
+
+        _resourcesLoaded = true;
         var merged = Application.Current.Resources.MergedDictionaries;
         merged.Add(new ResourceDictionary { Source = new Uri("Styles/Controls.xaml", UriKind.Relative) });
         merged.Add(new ResourceDictionary { Source = new Uri("Styles/Logo.xaml", UriKind.Relative) });
+        ThemeManager ??= _services?.GetRequiredService<ThemeService>();
+        if (State is not null)
+        {
+            ApplyTheme(State.Settings.Theme);
+        }
+    }
+
+    private CaptureCoordinator EnsureCoordinator()
+    {
+        if (Coordinator is not null)
+        {
+            return Coordinator;
+        }
+
+        if (_services is null)
+        {
+            throw new InvalidOperationException("應用程式尚未完成初始化。");
+        }
+
+        var coordinator = _services.GetRequiredService<CaptureCoordinator>();
+        coordinator.MainWindow = _mainWindow;
+        coordinator.AnnotationService = _annotations;
+        coordinator.CaptureAdded += OnCaptureAdded;
+        Coordinator = coordinator;
+        return coordinator;
+    }
+
+    private RecordingCoordinator EnsureRecording()
+    {
+        if (_recording is not null)
+        {
+            return _recording;
+        }
+
+        if (_services is null)
+        {
+            throw new InvalidOperationException("應用程式尚未完成初始化。");
+        }
+
+        var recording = _services.GetRequiredService<RecordingCoordinator>();
+        recording.MainWindow = _mainWindow;
+        recording.StateChanged += OnRecordingStateChanged;
+        _recording = recording;
+        return recording;
+    }
+
+    private ScreenAnnotationService EnsureAnnotations()
+    {
+        if (_annotations is not null)
+        {
+            return _annotations;
+        }
+
+        if (_services is null)
+        {
+            throw new InvalidOperationException("應用程式尚未完成初始化。");
+        }
+
+        var coordinator = EnsureCoordinator();
+        var annotations = _services.GetRequiredService<ScreenAnnotationService>();
+        annotations.CaptureCoordinator = coordinator;
+        coordinator.AnnotationService = annotations;
+        _annotations = annotations;
+        return annotations;
     }
 
     private static void ReportCommandLine(string message, MessageBoxImage icon)
@@ -219,7 +293,7 @@ public partial class App : Application
 
     private void ExecuteStartupCommand(StartupCommand command)
     {
-        if (Coordinator is null)
+        if (_services is null || command is StartupCommand.None or StartupCommand.Help or StartupCommand.Show)
         {
             return;
         }
@@ -227,19 +301,19 @@ public partial class App : Application
         switch (command)
         {
             case StartupCommand.CaptureRegion:
-                _ = Coordinator.CaptureRegionAsync(CaptureInvocationSource.CommandLine);
+                _ = EnsureCoordinator().CaptureRegionAsync(CaptureInvocationSource.CommandLine);
                 break;
             case StartupCommand.CaptureFullScreen:
-                _ = Coordinator.CaptureFullScreenAsync(CaptureInvocationSource.CommandLine);
+                _ = EnsureCoordinator().CaptureFullScreenAsync(CaptureInvocationSource.CommandLine);
                 break;
             case StartupCommand.CaptureMonitor:
-                _ = Coordinator.CaptureMonitorAsync(CaptureInvocationSource.CommandLine);
+                _ = EnsureCoordinator().CaptureMonitorAsync(CaptureInvocationSource.CommandLine);
                 break;
             case StartupCommand.CaptureWindow:
-                _ = Coordinator.CaptureWindowAsync(CaptureInvocationSource.CommandLine);
+                _ = EnsureCoordinator().CaptureWindowAsync(CaptureInvocationSource.CommandLine);
                 break;
             case StartupCommand.Annotate:
-                _annotations?.Toggle();
+                EnsureAnnotations().Toggle();
                 break;
         }
     }
@@ -250,7 +324,9 @@ public partial class App : Application
         services.AddLogging(logging =>
         {
             logging.ClearProviders();
+#if DEBUG
             logging.AddDebug();
+#endif
             logging.AddProvider(new FileLoggerProvider(FileLoggerProvider.DefaultDirectory));
             logging.SetMinimumLevel(LogLevel.Information);
         });
@@ -299,6 +375,7 @@ public partial class App : Application
             return;
         }
 
+        EnsureApplicationResources();
         _trayIcon.ContextMenu = BuildTrayMenu();
     }
 
@@ -315,24 +392,24 @@ public partial class App : Application
 
         menu.Items.Add(CreateMenuItem($"開啟 {AppStrings.AppName}", ShowMainWindow));
         menu.Items.Add(CreateSeparator());
-        menu.Items.Add(CreateMenuItem("區域擷取", () => _ = Coordinator!.CaptureRegionAsync(CaptureInvocationSource.QuickCapture)));
-        menu.Items.Add(CreateMenuItem("全螢幕擷取", () => _ = Coordinator!.CaptureFullScreenAsync(CaptureInvocationSource.QuickCapture)));
-        menu.Items.Add(CreateMenuItem("目前螢幕擷取", () => _ = Coordinator!.CaptureMonitorAsync(CaptureInvocationSource.QuickCapture)));
-        menu.Items.Add(CreateMenuItem("目前視窗擷取", () => _ = Coordinator!.CaptureWindowAsync(CaptureInvocationSource.QuickCapture)));
-        menu.Items.Add(CreateMenuItem("延遲擷取", () => _ = Coordinator!.CaptureDelayedAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("區域擷取", () => _ = EnsureCoordinator().CaptureRegionAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("全螢幕擷取", () => _ = EnsureCoordinator().CaptureFullScreenAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("目前螢幕擷取", () => _ = EnsureCoordinator().CaptureMonitorAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("目前視窗擷取", () => _ = EnsureCoordinator().CaptureWindowAsync(CaptureInvocationSource.QuickCapture)));
+        menu.Items.Add(CreateMenuItem("延遲擷取", () => _ = EnsureCoordinator().CaptureDelayedAsync(CaptureInvocationSource.QuickCapture)));
         menu.Items.Add(CreateSeparator());
-        _startRecordingMenuItem = CreateMenuItem(AppStrings.StartWindowRecording, () => _ = _recording!.StartWithSelectionAsync());
-        _startFullScreenRecordingMenuItem = CreateMenuItem(AppStrings.StartFullScreenRecording, () => _ = _recording!.StartFullScreenAsync());
-        _stopRecordingMenuItem = CreateMenuItem(AppStrings.StopRecording, () => _ = _recording!.StopAsync());
-        _openRecordingMenuItem = CreateMenuItem(AppStrings.OpenLastRecording, () => _ = _recording!.OpenLastRecording());
+        _startRecordingMenuItem = CreateMenuItem(AppStrings.StartWindowRecording, () => _ = EnsureRecording().StartWithSelectionAsync());
+        _startFullScreenRecordingMenuItem = CreateMenuItem(AppStrings.StartFullScreenRecording, () => _ = EnsureRecording().StartFullScreenAsync());
+        _stopRecordingMenuItem = CreateMenuItem(AppStrings.StopRecording, () => _ = _recording?.StopAsync());
+        _openRecordingMenuItem = CreateMenuItem(AppStrings.OpenLastRecording, () => _ = _recording?.OpenLastRecording());
         menu.Items.Add(_startFullScreenRecordingMenuItem);
         menu.Items.Add(_startRecordingMenuItem);
         menu.Items.Add(_stopRecordingMenuItem);
         menu.Items.Add(_openRecordingMenuItem);
-        menu.Items.Add(CreateMenuItem(AppStrings.OpenRecordingFolder, () => _ = _recording!.OpenRecordingFolder()));
+        menu.Items.Add(CreateMenuItem(AppStrings.OpenRecordingFolder, () => _ = EnsureRecording().OpenRecordingFolder()));
         UpdateRecordingMenuItems();
         menu.Items.Add(CreateSeparator());
-        menu.Items.Add(CreateMenuItem("螢幕標註", () => _annotations?.Toggle()));
+        menu.Items.Add(CreateMenuItem("螢幕標註", () => EnsureAnnotations().Toggle()));
         menu.Items.Add(CreateMenuItem("開啟資料夾", OpenDataFolder));
         menu.Items.Add(CreateMenuItem("設定", () => ShowMainWindow(1)));
         menu.Items.Add(CreateSeparator());
@@ -355,20 +432,21 @@ public partial class App : Application
 
     private void UpdateRecordingMenuItems()
     {
-        if (_recording is null || _startRecordingMenuItem is null || _startFullScreenRecordingMenuItem is null || _stopRecordingMenuItem is null || _openRecordingMenuItem is null)
+        if (_startRecordingMenuItem is null || _startFullScreenRecordingMenuItem is null || _stopRecordingMenuItem is null || _openRecordingMenuItem is null)
         {
             return;
         }
 
-        var state = _recording.State;
+        var state = _recording?.State ?? RecordingState.Idle;
         var idle = state == RecordingState.Idle;
+        var canStart = _recording?.CanStartRecording ?? OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362);
         _startRecordingMenuItem.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
         _startFullScreenRecordingMenuItem.Visibility = idle ? Visibility.Visible : Visibility.Collapsed;
-        _startRecordingMenuItem.IsEnabled = _recording.CanStartRecording;
-        _startFullScreenRecordingMenuItem.IsEnabled = _recording.CanStartRecording;
+        _startRecordingMenuItem.IsEnabled = canStart;
+        _startFullScreenRecordingMenuItem.IsEnabled = canStart;
         _stopRecordingMenuItem.Visibility = idle ? Visibility.Collapsed : Visibility.Visible;
         _stopRecordingMenuItem.IsEnabled = state is RecordingState.Starting or RecordingState.Countdown or RecordingState.Recording or RecordingState.Paused;
-        _openRecordingMenuItem.IsEnabled = _recording.LastOutputPath is { } path && File.Exists(path);
+        _openRecordingMenuItem.IsEnabled = _recording?.LastOutputPath is { } path && File.Exists(path);
         if (_trayIcon is not null)
         {
             _trayIcon.ToolTipText = state switch
@@ -406,7 +484,9 @@ public partial class App : Application
     private static SolidColorBrush CreateBrush(int value)
     {
         var channel = (byte)value;
-        return new SolidColorBrush(Color.FromRgb(channel, channel, channel));
+        var brush = new SolidColorBrush(Color.FromRgb(channel, channel, channel));
+        brush.Freeze();
+        return brush;
     }
 
     private static MenuItem CreateMenuItem(string header, Action action)
@@ -441,16 +521,21 @@ public partial class App : Application
             return _mainWindow;
         }
 
-        if (_services is null || Coordinator is null || _recording is null)
+        if (_services is null)
         {
             throw new InvalidOperationException("應用程式尚未完成初始化。");
         }
 
+        EnsureApplicationResources();
+        var coordinator = EnsureCoordinator();
+        var recording = EnsureRecording();
+        _ = EnsureAnnotations();
+
         var window = _services.GetRequiredService<MainWindow>();
         _mainWindow = window;
         MainWindow = window;
-        Coordinator.MainWindow = window;
-        _recording.MainWindow = window;
+        coordinator.MainWindow = window;
+        recording.MainWindow = window;
         window.UpdateHotkeyStatus(_hotkeyFailures);
         return window;
     }
@@ -506,7 +591,7 @@ public partial class App : Application
 
     public IReadOnlyList<string> ApplyHotkeys()
     {
-        if (_services is null || State is null || Coordinator is null)
+        if (_services is null || State is null)
         {
             return [];
         }
@@ -516,11 +601,11 @@ public partial class App : Application
         var failures = new List<string>();
         var settings = State.Settings;
 
-        Register(settings.HotkeyRegion, () => _ = Coordinator.CaptureRegionAsync(CaptureInvocationSource.GlobalHotkey));
-        Register(settings.HotkeyFullScreen, () => _ = Coordinator.CaptureFullScreenAsync(CaptureInvocationSource.GlobalHotkey));
-        Register(settings.HotkeyWindow, () => _ = Coordinator.CaptureWindowAsync(CaptureInvocationSource.GlobalHotkey));
-        Register(settings.HotkeyDelayed, () => _ = Coordinator.CaptureDelayedAsync(CaptureInvocationSource.GlobalHotkey));
-        Register(settings.HotkeyAnnotate, () => _annotations?.Toggle());
+        Register(settings.HotkeyRegion, () => _ = EnsureCoordinator().CaptureRegionAsync(CaptureInvocationSource.GlobalHotkey));
+        Register(settings.HotkeyFullScreen, () => _ = EnsureCoordinator().CaptureFullScreenAsync(CaptureInvocationSource.GlobalHotkey));
+        Register(settings.HotkeyWindow, () => _ = EnsureCoordinator().CaptureWindowAsync(CaptureInvocationSource.GlobalHotkey));
+        Register(settings.HotkeyDelayed, () => _ = EnsureCoordinator().CaptureDelayedAsync(CaptureInvocationSource.GlobalHotkey));
+        Register(settings.HotkeyAnnotate, () => EnsureAnnotations().Toggle());
 
         _hotkeyFailures = failures;
         _mainWindow?.UpdateHotkeyStatus(failures);

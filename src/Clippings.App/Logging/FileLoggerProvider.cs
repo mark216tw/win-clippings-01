@@ -8,19 +8,19 @@ namespace Clippings.App.Logging;
 public sealed class FileLoggerProvider : ILoggerProvider
 {
     private const int RetentionDays = 7;
-    private const int ChannelCapacity = 2048;
+    private const int ChannelCapacity = 512;
     private const int MaxBatchSize = 64;
 
     private readonly string _directory;
     private readonly Channel<LogEntry> _channel;
     private readonly Task _writerTask;
+    private bool _directoryEnsured;
     private bool _disposed;
 
     public FileLoggerProvider(string directory)
     {
         _directory = directory;
-        Directory.CreateDirectory(_directory);
-        _ = Task.Run(CleanupOldLogs);
+        _ = Task.Run(CleanupOldLogsDelayedAsync);
 
         _channel = Channel.CreateBounded<LogEntry>(
             new BoundedChannelOptions(ChannelCapacity)
@@ -64,69 +64,48 @@ public sealed class FileLoggerProvider : ILoggerProvider
 
     private async Task WriteLoopAsync()
     {
-        StreamWriter? writer = null;
-        DateOnly? writerDate = null;
-
-        void ResetWriter()
+        while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false))
         {
-            writer?.Dispose();
-            writer = null;
-            writerDate = null;
-        }
-
-        try
-        {
-            while (await _channel.Reader.WaitToReadAsync().ConfigureAwait(false))
+            var builder = new StringBuilder();
+            var count = 0;
+            while (count < MaxBatchSize && _channel.Reader.TryRead(out var entry))
             {
-                var builder = new StringBuilder();
-                var count = 0;
-                while (count < MaxBatchSize && _channel.Reader.TryRead(out var entry))
-                {
-                    AppendEntry(builder, entry);
-                    count++;
-                }
-
-                if (count == 0)
-                {
-                    continue;
-                }
-
-                var today = DateOnly.FromDateTime(DateTimeOffset.Now.LocalDateTime);
-                try
-                {
-                    var activeWriter = writer;
-                    if (activeWriter is null || writerDate != today)
-                    {
-                        ResetWriter();
-                        var path = Path.Combine(_directory, $"app-{today:yyyyMMdd}.log");
-                        var stream = new FileStream(
-                            path,
-                            FileMode.Append,
-                            FileAccess.Write,
-                            FileShare.ReadWrite,
-                            4096,
-                            FileOptions.Asynchronous);
-                        activeWriter = new StreamWriter(stream);
-                        writer = activeWriter;
-                        writerDate = today;
-                    }
-
-                    await activeWriter.WriteAsync(builder.ToString()).ConfigureAwait(false);
-                    await activeWriter.FlushAsync().ConfigureAwait(false);
-                }
-                catch (IOException)
-                {
-                    ResetWriter();
-                }
-                catch (UnauthorizedAccessException)
-                {
-                    ResetWriter();
-                }
+                AppendEntry(builder, entry);
+                count++;
             }
-        }
-        finally
-        {
-            ResetWriter();
+
+            if (count == 0)
+            {
+                continue;
+            }
+
+            var today = DateOnly.FromDateTime(DateTimeOffset.Now.LocalDateTime);
+            try
+            {
+                if (!_directoryEnsured)
+                {
+                    Directory.CreateDirectory(_directory);
+                    _directoryEnsured = true;
+                }
+
+                var path = Path.Combine(_directory, $"app-{today:yyyyMMdd}.log");
+                await using var stream = new FileStream(
+                    path,
+                    FileMode.Append,
+                    FileAccess.Write,
+                    FileShare.ReadWrite,
+                    4096,
+                    FileOptions.Asynchronous);
+                await using var writer = new StreamWriter(stream);
+                await writer.WriteAsync(builder.ToString()).ConfigureAwait(false);
+                await writer.FlushAsync().ConfigureAwait(false);
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
         }
     }
 
@@ -145,6 +124,17 @@ public sealed class FileLoggerProvider : ILoggerProvider
         {
             builder.AppendLine(entry.Exception.ToString());
         }
+    }
+
+    private async Task CleanupOldLogsDelayedAsync()
+    {
+        await Task.Delay(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+        if (_disposed)
+        {
+            return;
+        }
+
+        CleanupOldLogs();
     }
 
     private void CleanupOldLogs()

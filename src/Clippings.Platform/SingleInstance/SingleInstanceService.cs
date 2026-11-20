@@ -45,7 +45,8 @@ public sealed class SingleInstanceService : IDisposable
         {
             using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
             client.Connect(1500);
-            var payload = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(arguments) + "\n");
+            var payload = Encoding.UTF8.GetBytes(
+                JsonSerializer.Serialize(arguments, ActivationArgumentsJsonContext.Default.IReadOnlyListString) + "\n");
             client.Write(payload, 0, payload.Length);
             client.Flush();
             return true;
@@ -120,7 +121,7 @@ public sealed class SingleInstanceService : IDisposable
 
         try
         {
-            return JsonSerializer.Deserialize<string[]>(buffer.AsSpan(0, length)) ?? [];
+            return JsonSerializer.Deserialize(buffer.AsSpan(0, length), ActivationArgumentsJsonContext.Default.StringArray) ?? [];
         }
         catch (JsonException)
         {

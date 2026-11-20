@@ -1,5 +1,4 @@
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using Clippings.Core.Helpers;
 using Clippings.Core.Models;
 using Clippings.Core.Services;
@@ -8,13 +7,6 @@ namespace Clippings.Platform.Storage;
 
 public sealed class JsonSettingsStore : ISettingsStore
 {
-    private static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        Converters = { new JsonStringEnumConverter() },
-    };
-
     private readonly object _gate = new();
     private readonly string _path;
 
@@ -41,8 +33,8 @@ public sealed class JsonSettingsStore : ISettingsStore
 
             try
             {
-                var json = File.ReadAllText(_path);
-                var settings = JsonSerializer.Deserialize<AppSettings>(json, Options) ?? new AppSettings();
+                using var stream = File.OpenRead(_path);
+                var settings = JsonSerializer.Deserialize(stream, AppSettingsJsonContext.Default.AppSettings) ?? new AppSettings();
                 settings.Annotation ??= new AnnotationSettings();
                 settings.Recording ??= new RecordingSettings();
                 return settings;
@@ -75,7 +67,11 @@ public sealed class JsonSettingsStore : ISettingsStore
             }
 
             var tempPath = _path + ".tmp";
-            File.WriteAllText(tempPath, JsonSerializer.Serialize(settings, Options));
+            using (var stream = File.Create(tempPath))
+            {
+                JsonSerializer.Serialize(stream, settings, AppSettingsJsonContext.Default.AppSettings);
+            }
+
             File.Move(tempPath, _path, overwrite: true);
         }
     }

@@ -43,8 +43,8 @@ Clippings 解決日常截圖與複製貼上的重複工作：用全域快捷鍵�
 
 | 平台 | 檔案 | 大小 | 需求 |
 | --- | --- | ---: | --- |
-| x64 | `Clippings-1.28.3-win-x64-framework-dependent.zip` | 約 14 MB | 需安裝 .NET 10 Desktop Runtime（x64） |
-| ARM64 | `Clippings-1.28.3-win-arm64-framework-dependent.zip` | 約 13.5 MB | 需安裝 .NET 10 Desktop Runtime（ARM64） |
+| x64 | `Clippings-1.34.1-win-x64-framework-dependent.zip` | 約 14.2 MB | 需安裝 .NET 10 Desktop Runtime（x64） |
+| ARM64 | `Clippings-1.34.1-win-arm64-framework-dependent.zip` | 約 13.6 MB | 需安裝 .NET 10 Desktop Runtime（ARM64） |
 
 僅提供 framework-dependent ZIP，不提供安裝檔。.NET 10 Desktop Runtime 下載：<https://dotnet.microsoft.com/download/dotnet/10.0>
 

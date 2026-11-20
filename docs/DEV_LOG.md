@@ -4,6 +4,61 @@
 
 ---
 
+## 2026-11-20 - 提升啟動速度與降低常駐記憶體使用量（v1.34.1）
+
+### 目標
+
+縮短應用程式冷啟動與開機自動啟動時間，並顯著降低應用程式常駐於系統匣時的記憶體佔用（Working Set 與託管／原生影像緩衝區）。
+
+### 變更
+
+- `App/App.xaml.cs`：
+  - `CaptureCoordinator`、`RecordingCoordinator`、`ScreenAnnotationService` 改為延遲解析（`EnsureCoordinator`／`EnsureRecording`／`EnsureAnnotations`）；以 `--autostart` 常駐啟動時不再預先載入 SkiaSharp、WinRT 或建立主視窗資源。
+  - 延遲 `Styles/Controls.xaml`、`Styles/Logo.xaml` 與主題資源載入至首次顯示主視窗或建立系統匣選單。
+  - `StartupRegistrar.SetEnabled` 與 `LegacyDataCleanup.RunAsync` 移至背景執行緒，避免阻塞啟動 UI 流程；`logging.AddDebug()` 改為僅在 `DEBUG` 組態啟用。
+  - 系統匣選單筆刷改為 `Freeze()`；`--autostart` 背景常駐就緒後排程釋放工作集。
+- `Platform/Capture/WindowsGraphicsRecordingService.cs`、`WindowsGraphicsCaptureService.cs`、`App/Services/RecordingCoordinator.cs`：
+  - `GraphicsCaptureSession.IsSupported()` 改為 `Lazy<bool>` 快取；啟動與系統匣狀態檢查改用輕量 OS 版本判斷（`IsLikelySupported`），實際開始錄影時才觸發 WinRT 初始化。
+- `Platform/Storage/AppSettingsJsonContext.cs`、`JsonSettingsStore.cs`、`Platform/SingleInstance/ActivationArgumentsJsonContext.cs`、`SingleInstanceService.cs`：
+  - 改用 `System.Text.Json` Source Generator 取代反射序列化，減少啟動 JIT 與中繼資料記憶體開銷。
+- `Platform/Imaging/ImageCodec.cs`、`App/Services/CaptureWorkspaceService.cs`：
+  - `ImageCodec.Load`／`Decode` 改為直接呼叫 `SKBitmap.Decode`，消除額外的 `byte[]` 與 `SKData.CreateCopy` 複製。
+  - `CaptureWorkspaceService.LoadAsync` 改為直接讀取 PNG 前 24 bytes IHDR 標頭取得寬高，不需載入 `SKCodec`／原生 SkiaSharp。
+- `App/Views/EditorView.xaml.cs`、`CaptureWorkspacePage.xaml.cs`、`MainWindow.xaml.cs`：
+  - 主視窗關閉隱藏至系統匣時，先將未儲存變更寫回暫存檔，再卸載 `EditorView`（釋放 `SKBitmap`、復原堆疊、馬賽克快取與 `SKElement` 後端緩衝區），並記住最後選取的頁籤；重新開啟主視窗時自動從暫存檔還原。
+- `Platform/Interop/MemoryTrimmer.cs`、`NativeMethods.cs`：
+  - 新增 `MemoryTrimmer`（合併排程、Gen2／LOH 壓縮與 `SetProcessWorkingSetSize`），於主視窗退至系統匣、背景擷取結束、螢幕標註結束及錄影結束時自動回收常駐記憶體。
+- `App/Views/CaptureOverlayWindow.xaml.cs`、`App/Services/CaptureCoordinator.cs`、`ScreenAnnotationService.cs`：
+  - 擷取遮罩關閉時清除 `FrozenImage.Source`／`MagnifierImage.Source` 並凍結靜態筆刷；移除 `HandleCaptureAsync` 未使用的 SHA-256 計算；螢幕標註結束時清空 `Document`。
+- `App/Logging/FileLoggerProvider.cs`：
+  - 延遲建立日誌資料夾與舊檔清理、縮小通道容量至 512，並於每次批次寫入後關閉檔案串流，避免常駐期間長期持有檔案控制代碼與緩衝區。
+- `App/Clippings.App.csproj`：
+  - 明確設定 `ServerGarbageCollection=false` 與 `RetainVMGarbageCollection=false`，讓 GC 將已釋放的虛擬記憶體歸還作業系統。
+- 版本更新為 1.34.1。
+
+### 問題與解法
+
+- 背景執行緒排程 `MemoryTrimmer` 若直接讀取 `Window.IsVisible` 會觸發 WPF 跨執行緒存取例外 → 在 `App` 新增以 `volatile bool` 維護的 `IsMainWindowVisible`，由 `MainWindow.IsVisibleChanged` 同步更新，確保背景判斷執行緒安全。
+- `MainWindow` 隱藏至系統匣卸載 `EditorView` 前若有未寫入的編輯會遺失 → `SuspendToTrayAsync` 先等待 `FlushWorkspaceAsync()` 完成，並確認 `!editor.IsDirty` 與 `!IsVisible` 後才卸載。
+
+### 待辦
+
+- 需實機以工作管理員量測冷啟動、`--autostart` 常駐與關閉主視窗至系統匣前後的啟動耗時與記憶體（Working Set / Private Bytes）變化。
+
+### 驗證與發佈
+
+- `dotnet build Clippings.sln -c Debug`：成功，0 警告 0 錯誤
+- `dotnet test Clippings.sln -c Debug --no-build`：131 項全數通過
+- `dotnet format Clippings.sln --verify-no-changes --no-restore`：通過
+- `dotnet publish`（Release、framework-dependent、關閉 ReadyToRun）：x64 與 ARM64 成功，`Clippings.App.New.exe` FileVersion 1.34.1.0
+- 同步更新 `CHANGELOG.md`、`RELEASE_NOTES.md`、`README.md`
+- 以 mark216tw <mark216tw@gmail.com> 建立 commit、`v1.34.1` tag 與 GitHub Release
+- Release 資產（framework-dependent、ZIP 去除 PDB）：
+  - `Clippings-1.34.1-win-x64-framework-dependent.zip`（14,192,107 bytes，SHA-256 `15A6599B899138926719CDFC782A72A394EDDBB0277AE7343FC14622651DB900`）
+  - `Clippings-1.34.1-win-arm64-framework-dependent.zip`（13,558,276 bytes，SHA-256 `4B9D4EBB1ED04714853ADAE687BBEE39079C0DE5AB439490D71714722061157A`）
+
+---
+
 ## 2026-11-18 - 設定頁整理與背景點擊切換（v1.34.0）
 
 ### 目標

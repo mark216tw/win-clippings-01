@@ -18,9 +18,11 @@ public sealed class WindowsGraphicsCaptureService
     private static readonly Guid IdxgiDevice = new("54EC77FA-1377-44E6-8C32-88FD5F44C84C");
     private static readonly Guid IGraphicsCaptureItem = new("79C3F95B-31F7-4EC2-A464-632EF5D30760");
 
-    public bool IsSupported =>
+    private static readonly Lazy<bool> CachedSupport = new(() =>
         OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362) &&
-        GraphicsCaptureSession.IsSupported();
+        GraphicsCaptureSession.IsSupported());
+
+    public bool IsSupported => CachedSupport.Value;
 
     public async Task<SKBitmap> CaptureWindowAsync(
         IntPtr window,

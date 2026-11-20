@@ -20,9 +20,16 @@ public sealed class WindowsGraphicsRecordingService
     private static readonly TimeSpan SampleProgressInterval = TimeSpan.FromMilliseconds(500);
     private const long MinimumOngoingFreeSpaceBytes = 64L * 1024 * 1024;
 
-    public bool IsSupported =>
+    private static readonly Lazy<bool> CachedSupport = new(() =>
         OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362) &&
-        GraphicsCaptureSession.IsSupported();
+        GraphicsCaptureSession.IsSupported());
+
+    public bool IsSupported => CachedSupport.Value;
+
+    public bool IsLikelySupported =>
+        CachedSupport.IsValueCreated
+            ? CachedSupport.Value
+            : OperatingSystem.IsWindowsVersionAtLeast(10, 0, 18362);
 
     public Task<RecordingResult> RecordWindowAsync(
         IntPtr window,
