@@ -16,37 +16,43 @@
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
 
-                <GeometryDrawing Brush="#BFD3FF">
+                <!-- Back blade (upper-left ring to lower-right tip) -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#D6E4FF" Thickness="2.6" StartLineCap="Round" EndLineCap="Round" />
+                    </GeometryDrawing.Pen>
                     <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="11.5,4,9,5" RadiusX="2" RadiusY="2" />
+                        <LineGeometry StartPoint="12.2,12.8" EndPoint="25.2,22.8" />
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
 
-                <GeometryDrawing Brush="#FFFFFF">
+                <!-- Front blade (lower-left ring to upper-right tip) -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FFFFFF" Thickness="2.7" StartLineCap="Round" EndLineCap="Round" />
+                    </GeometryDrawing.Pen>
                     <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="7,7,18,21" RadiusX="3" RadiusY="3" />
+                        <LineGeometry StartPoint="12.2,19.2" EndPoint="25.2,9.2" />
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
 
-                <GeometryDrawing Brush="#2D6BF2">
-                    <GeometryDrawing.Geometry>
-                        <RectangleGeometry Rect="13,5.5,6,3.5" RadiusX="1.5" RadiusY="1.5" />
-                    </GeometryDrawing.Geometry>
-                </GeometryDrawing>
-
-                <GeometryDrawing Brush="#2D6BF2">
+                <!-- Handle rings -->
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="#FFFFFF" Thickness="2.4" />
+                    </GeometryDrawing.Pen>
                     <GeometryDrawing.Geometry>
                         <GeometryGroup>
-                            <RectangleGeometry Rect="10.5,12.5,11,2" RadiusX="1" RadiusY="1" />
-                            <RectangleGeometry Rect="10.5,17,8,2" RadiusX="1" RadiusY="1" />
-                            <RectangleGeometry Rect="10.5,21.5,10,2" RadiusX="1" RadiusY="1" />
+                            <EllipseGeometry Center="9.5,10.0" RadiusX="3.5" RadiusY="3.5" />
+                            <EllipseGeometry Center="9.5,22.0" RadiusX="3.5" RadiusY="3.5" />
                         </GeometryGroup>
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
 
+                <!-- Pivot screw -->
                 <GeometryDrawing Brush="#FFC857">
                     <GeometryDrawing.Geometry>
-                        <EllipseGeometry Center="21.6,23.5" RadiusX="1.8" RadiusY="1.8" />
+                        <EllipseGeometry Center="16.4,16.0" RadiusX="1.45" RadiusY="1.45" />
                     </GeometryDrawing.Geometry>
                 </GeometryDrawing>
             </DrawingGroup>

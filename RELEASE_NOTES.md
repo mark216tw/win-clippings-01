@@ -1,3 +1,25 @@
+# Clippings 剪貼簿 2 1.34.2
+
+## 全新剪刀圖示
+
+- 應用程式圖示改為剪刀圖案，執行檔、工作列、系統匣與側欄標誌一致更新。
+- 保留原本的藍底圓角漸層，並以雙環刀刃與金色軸心呈現剪刀造型。
+- 重新產生多解析度圖示，圖示檔體積由約 372 KB 縮減至約 37 KB，載入更輕量。
+
+## 下載
+
+- `win-x64`：適用 Intel 或 AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+僅提供 framework-dependent ZIP，請解壓縮後使用。需安裝 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)；解壓縮後執行 `Clippings.App.New.exe`。
+
+## SHA-256
+
+- `Clippings-1.34.2-win-x64-framework-dependent.zip`：`2FC1AE572266ABC904E75E2EE36AEF739A514A5685CFF65A6AAA960047AF3876`
+- `Clippings-1.34.2-win-arm64-framework-dependent.zip`：`A3D21D999FFFB4EE6DC7CE3E1F71B286BA539D8E6BA9A6F0A69B0D6CDC912E41`
+
+---
+
 # Clippings 剪貼簿 2 1.34.1
 
 ## 啟動更快、常駐更省記憶體
