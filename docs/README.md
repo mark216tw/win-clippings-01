@@ -1,6 +1,6 @@
-# Clippings 剪貼簿 2 文件
+# Clippings 剪貼簿 文件
 
-本目錄收錄 Clippings 剪貼簿 2（APP ID `Clippings.App.New`）的使用、架構、技術與發佈文件。
+本目錄收錄 Clippings 剪貼簿（APP ID `Clippings.App.New`）的使用、架構、技術與發佈文件。
 
 | 文件 | 適合對象 | 內容 |
 | --- | --- | --- |

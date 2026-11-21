@@ -4,6 +4,28 @@
 
 ---
 
+## 2026-11-21 - 顯示名稱改為「Clippings 剪貼簿」（v1.34.3）
+
+### 目標
+
+將應用程式顯示名稱由「Clippings 剪貼簿 2」改為「Clippings 剪貼簿」，避免名稱中的版本序號造成混淆。APP ID `Clippings.App.New`、資料夾與輸出檔名維持不變。
+
+### 變更
+
+- `Strings/AppStrings.cs`、`App.xaml`、`MainWindow.xaml`、`SettingsPage.xaml`：更新視窗標題、系統匣提示與關於頁顯示名稱。
+- `Directory.Build.props`：更新 `AssemblyTitle`、`Description`，版本更新為 1.34.3。
+- `README.md`、`docs/README.md`、`docs/USER_GUIDE.md`、`docs/PRIVACY.md`、`docs/BUILD_AND_RELEASE.md`、`AGENTS.md`：同步文件名稱。
+
+### 問題與解法
+
+- 無。
+
+### 待辦
+
+- 歷史版本紀錄（`CHANGELOG.md` 舊版項目、`RELEASE_NOTES.md`）保留原名，不回溯修改。
+
+---
+
 ## 2026-11-20 - AP 圖示改為剪刀圖案（v1.34.2）
 
 ### 目標

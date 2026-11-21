@@ -1,3 +1,24 @@
+# Clippings 剪貼簿 1.34.3
+
+## 顯示名稱調整
+
+- 應用程式顯示名稱由「Clippings 剪貼簿 2」改為「Clippings 剪貼簿」。
+- 視窗標題、系統匣提示、關於頁面、命令列說明與檔案屬性描述同步更新，內部 APP ID、資料夾與輸出檔名維持不變。
+
+## 下載
+
+- `win-x64`：適用 Intel 或 AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+僅提供 framework-dependent ZIP，請解壓縮後使用。需安裝 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)；解壓縮後執行 `Clippings.App.New.exe`。
+
+## SHA-256
+
+- `Clippings-1.34.3-win-x64-framework-dependent.zip`：`8A5E9BE460CA0DD97F8E8C69966BD2F632B37C9B2570F469B16158A28C3C6B59`
+- `Clippings-1.34.3-win-arm64-framework-dependent.zip`：`F0189742697EF489145F009A94DF75A547AC1922F39CCC9469422CDB8D26B526`
+
+---
+
 # Clippings 剪貼簿 2 1.34.2
 
 ## 全新剪刀圖示

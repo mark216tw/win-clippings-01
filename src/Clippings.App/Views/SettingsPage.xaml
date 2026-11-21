@@ -311,7 +311,7 @@
                 <StackPanel>
                     <TextBlock Text="關於" Style="{StaticResource SectionTitleStyle}" />
 
-                    <TextBlock Text="Clippings 剪貼簿 2" Margin="0,12,0,0" />
+                    <TextBlock Text="Clippings 剪貼簿" Margin="0,12,0,0" />
                     <TextBlock x:Name="VersionText"
                                Style="{StaticResource CaptionStyle}"
                                Margin="0,4,0,0" />

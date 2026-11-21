@@ -37,7 +37,7 @@
                            VerticalAlignment="Center" />
                     <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                         <TextBlock Text="Clippings" FontSize="17" FontWeight="SemiBold" />
-                        <TextBlock Text="剪貼簿 2" Style="{StaticResource CaptionStyle}" />
+                        <TextBlock Text="剪貼簿" Style="{StaticResource CaptionStyle}" />
                     </StackPanel>
                 </StackPanel>
 

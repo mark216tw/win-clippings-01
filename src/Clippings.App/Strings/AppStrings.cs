@@ -4,7 +4,7 @@ namespace Clippings.App.Strings;
 
 public static class AppStrings
 {
-    public const string AppName = "Clippings 剪貼簿 2";
+    public const string AppName = "Clippings 剪貼簿";
     public const string WorkspaceTitle = "擷圖";
     public const string WorkspaceEmpty = "還沒有擷圖，按 Ctrl+Shift+X 或下方按鈕開始。";
     public const string WorkspaceCloseAll = "全部關閉";
@@ -119,16 +119,16 @@ public static class AppStrings
     public const string ClipboardCopyFailed = "複製失敗，剪貼簿可能被其他程式佔用。";
     public const string Saved = "已儲存。";
     public const string AutoSaveFailed = "擷取已完成，但自動存檔失敗。";
-    public const string CommandLineForwardFailed = "無法連線到執行中的 Clippings 剪貼簿 2，指令未送出。";
+    public const string CommandLineForwardFailed = "無法連線到執行中的 Clippings 剪貼簿，指令未送出。";
     public const string RecordingStarted = "已開始錄影。";
     public const string RecordingUnsupported = "此 Windows 版本或顯示環境不支援螢幕錄影。";
     public const string RecordingTargetUnavailable = "所選視窗已無法錄製，請重新選擇。";
     public const string RecordingMonitorUnavailable = "找不到可錄製的螢幕。";
     public const string RecordingResizeWarning = "錄影開始後若調整所選視窗大小或將視窗最小化，錄影會自動停止。";
-    public const string RecordingTrayToolTip = "Clippings 剪貼簿 2（正在錄影）";
-    public const string RecordingTrayToolTipPaused = "Clippings 剪貼簿 2（錄影已暫停）";
+    public const string RecordingTrayToolTip = "Clippings 剪貼簿（正在錄影）";
+    public const string RecordingTrayToolTipPaused = "Clippings 剪貼簿（錄影已暫停）";
     public const string CommandLineUsage = """
-        Clippings 剪貼簿 2 命令列參數
+        Clippings 剪貼簿 命令列參數
 
           Clippings.App.New.exe [參數]
 

@@ -55,7 +55,7 @@ Clippings 是離線的 Windows 桌面應用程式。本文件說明程式會處�
 - 完整清除方式：
 
 ```powershell
-# 先結束 Clippings 剪貼簿 2
+# 先結束 Clippings 剪貼簿
 Remove-Item -Recurse -Force "$env:LOCALAPPDATA\Clippings.App.New"
 
 # 移除開機啟動（若曾啟用）

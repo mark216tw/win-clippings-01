@@ -147,7 +147,7 @@ docs/DEV_LOG.md                # 開發過程紀錄（必要）
 
 ## 專案專屬補充
 
-- 專案名稱：Clippings 剪貼簿 2
+- 專案名稱：Clippings 剪貼簿
 - 命名空間／組件名稱：`Clippings.Core`、`Clippings.Platform`、`Clippings.App`；APP ID／輸出檔為 `Clippings.App.New` 與 `Clippings.App.New.exe`
 - 新 APP ID 需保持完整隔離：資料夾、Mutex／Pipe、開機啟動登錄值與 AppUserModelID 皆使用 `Clippings.App.New`。
 - **UI 框架例外**：本專案依使用者決定採用 WPF（`net10.0-windows10.0.19041.0` + `UseWPF`），不採 WinUI 3；其餘規範仍適用。WPF 不支援 `.resw`，使用者可見文字集中於 `src/Clippings.App/Strings/AppStrings.cs`，待後續改為 `.resx` 多語系。

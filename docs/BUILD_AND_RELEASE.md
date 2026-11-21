@@ -154,7 +154,7 @@ git push origin v1.28.3
 gh release create v1.28.3 `
   "artifacts\Clippings-1.28.3-win-x64-framework-dependent.zip" `
   "artifacts\Clippings-1.28.3-win-arm64-framework-dependent.zip" `
-  --title "Clippings 剪貼簿 2 1.28.3" `
+  --title "Clippings 剪貼簿 1.28.3" `
   --notes-file "artifacts\release-notes-1.28.3.md"
 ```
 

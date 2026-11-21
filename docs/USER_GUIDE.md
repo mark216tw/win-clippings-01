@@ -1,6 +1,6 @@
-# Clippings 剪貼簿 2 使用指南
+# Clippings 剪貼簿 使用指南
 
-本文件說明 Clippings 剪貼簿 2 的安裝、日常操作、設定與疑難排解。此版本使用新的 APP ID `Clippings.App.New`，可與舊版 Clippings 並存，資料不會互通。若只想快速開始，請先閱讀根目錄的 [README](../README.md)。
+本文件說明 Clippings 剪貼簿 的安裝、日常操作、設定與疑難排解。此版本使用新的 APP ID `Clippings.App.New`，可與舊版 Clippings 並存，資料不會互通。若只想快速開始，請先閱讀根目錄的 [README](../README.md)。
 
 ---
 
@@ -321,7 +321,7 @@ $p.ExitCode
 
 備份建議：
 
-1. 先從系統匣選單結束 Clippings 剪貼簿 2。
+1. 先從系統匣選單結束 Clippings 剪貼簿。
 2. 複製整個 `%LOCALAPPDATA%\Clippings.App.New` 資料夾。
 3. 還原時將資料夾放回相同位置再啟動程式。
 
@@ -357,7 +357,7 @@ Windows Shell 會快取圖示。請先解除舊的固定項目，再從新版 `C
 
 ## 12. 解除安裝與清理
 
-1. 從系統匣選單結束 Clippings 剪貼簿 2。
+1. 從系統匣選單結束 Clippings 剪貼簿。
 2. 在設定頁取消「開機時自動啟動」，或手動刪除登錄值 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run\Clippings.App.New`。
 3. 刪除程式資料夾。
 4. 若要完全清除資料，刪除 `%LOCALAPPDATA%\Clippings.App.New`。

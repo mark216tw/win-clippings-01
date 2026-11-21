@@ -6,7 +6,7 @@
     <Application.Resources>
         <ResourceDictionary>
             <tb:TaskbarIcon x:Key="TrayIcon"
-                            ToolTipText="Clippings 剪貼簿 2"
+                            ToolTipText="Clippings 剪貼簿"
                             IconSource="pack://application:,,,/Assets/clippings.ico"
                             NoLeftClickDelay="True" />
         </ResourceDictionary>

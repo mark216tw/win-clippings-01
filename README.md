@@ -1,4 +1,4 @@
-# Clippings 剪貼簿 2
+# Clippings 剪貼簿
 
 Windows 桌面擷取與標註工具，使用 .NET 10 與 WPF 開發。程式可免安裝執行、常駐系統匣，所有資料都留在本機，不需要網路連線。此版本使用新的 APP ID `Clippings.App.New`，可與舊版 Clippings 並存。
 
