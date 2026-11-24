@@ -21,7 +21,9 @@ public partial class EditorView : UserControl
     private const double CropHandleSize = 9;
     private const double CropResizeHitThickness = 8;
     private const int MinimumCropSize = 8;
-    private const float DefaultZoom = 0.8f;
+    private const float DefaultZoom = 1f;
+    private const double ActualPixelSnapEpsilon = 0.001;
+    private const double WheelActualPixelSnapRatio = 0.02;
     private static readonly FontFamily EditorFontFamily = new("Microsoft JhengHei UI");
     private static readonly SKTypeface EditorTypeface = SKTypeface.FromFamilyName("Microsoft JhengHei UI") ?? SKTypeface.Default;
 
@@ -294,6 +296,39 @@ public partial class EditorView : UserControl
         UpdateOverlayLayout();
     }
 
+    private static float GetActualPixelZoom(DpiScale dpi)
+        => (float)(1.0 / Math.Max(0.25, dpi.DpiScaleX));
+
+    private SKPoint CenterOffsetAligned(double zoom, DpiScale dpi)
+    {
+        var x = Math.Round((CanvasElement.ActualWidth - Bitmap.Width * zoom) * dpi.DpiScaleX / 2.0) / dpi.DpiScaleX;
+        var y = Math.Round((CanvasElement.ActualHeight - Bitmap.Height * zoom) * dpi.DpiScaleY / 2.0) / dpi.DpiScaleY;
+        return new SKPoint((float)x, (float)y);
+    }
+
+    private float SnapZoomNearActualPixels(float candidateZoom)
+    {
+        var actualZoom = GetActualPixelZoom(VisualTreeHelper.GetDpi(CanvasElement));
+        return Math.Abs(candidateZoom - actualZoom) / actualZoom <= WheelActualPixelSnapRatio
+            ? actualZoom
+            : candidateZoom;
+    }
+
+    private static SKSamplingOptions SelectBitmapSampling(double pixelZoom)
+    {
+        if (Math.Abs(pixelZoom - 1.0) < ActualPixelSnapEpsilon || pixelZoom >= 2.0)
+        {
+            return new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None);
+        }
+
+        if (pixelZoom >= 0.5)
+        {
+            return new SKSamplingOptions(SKCubicResampler.CatmullRom);
+        }
+
+        return new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear);
+    }
+
     private void ApplyDefaultZoom()
     {
         if (!_hasImage || Bitmap.Width <= 0 || Bitmap.Height <= 0)
@@ -301,10 +336,18 @@ public partial class EditorView : UserControl
             return;
         }
 
-        _zoom = DefaultZoom;
-        _offset = new SKPoint(
-            (float)((CanvasElement.ActualWidth - Bitmap.Width * _zoom) / 2),
-            (float)((CanvasElement.ActualHeight - Bitmap.Height * _zoom) / 2));
+        var dpi = VisualTreeHelper.GetDpi(CanvasElement);
+        var actualPixelZoom = GetActualPixelZoom(dpi);
+        var availableWidth = Math.Max(64, CanvasElement.ActualWidth - 48);
+        var availableHeight = Math.Max(64, CanvasElement.ActualHeight - 48);
+        var fitZoom = Math.Min(availableWidth / Bitmap.Width, availableHeight / Bitmap.Height);
+        _zoom = (float)Math.Min(actualPixelZoom, fitZoom);
+        if (_zoom <= 0 || float.IsNaN(_zoom) || float.IsInfinity(_zoom))
+        {
+            _zoom = actualPixelZoom;
+        }
+
+        _offset = CenterOffsetAligned(_zoom, dpi);
         _initialZoomApplied = true;
         UpdateZoomText();
         UpdateOverlayLayout();
@@ -323,17 +366,17 @@ public partial class EditorView : UserControl
             return;
         }
 
+        var dpi = VisualTreeHelper.GetDpi(CanvasElement);
+        var actualPixelZoom = GetActualPixelZoom(dpi);
         var availableWidth = Math.Max(64, CanvasElement.ActualWidth - 48);
         var availableHeight = Math.Max(64, CanvasElement.ActualHeight - 48);
-        _zoom = (float)Math.Min(1.0, Math.Min(availableWidth / Bitmap.Width, availableHeight / Bitmap.Height));
+        _zoom = (float)Math.Min(actualPixelZoom, Math.Min(availableWidth / Bitmap.Width, availableHeight / Bitmap.Height));
         if (_zoom <= 0 || float.IsNaN(_zoom) || float.IsInfinity(_zoom))
         {
-            _zoom = 1;
+            _zoom = actualPixelZoom;
         }
 
-        _offset = new SKPoint(
-            (float)((CanvasElement.ActualWidth - Bitmap.Width * _zoom) / 2),
-            (float)((CanvasElement.ActualHeight - Bitmap.Height * _zoom) / 2));
+        _offset = CenterOffsetAligned(_zoom, dpi);
         _initialZoomApplied = true;
         UpdateZoomText();
         UpdateOverlayLayout();
@@ -349,7 +392,7 @@ public partial class EditorView : UserControl
 
         var center = new Point(CanvasElement.ActualWidth / 2, CanvasElement.ActualHeight / 2);
         var imagePoint = ClampToImage(ToImage(center));
-        var newZoom = Math.Clamp(_zoom * factor, 0.05f, 8f);
+        var newZoom = SnapZoomNearActualPixels(Math.Clamp(_zoom * factor, 0.05f, 8f));
         if (Math.Abs(newZoom - _zoom) < 0.0001f)
         {
             return;
@@ -386,11 +429,8 @@ public partial class EditorView : UserControl
         }
 
         var dpi = VisualTreeHelper.GetDpi(CanvasElement);
-        _zoom = (float)(1.0 / dpi.DpiScaleX);
-        // Align the image origin to display pixels, avoiding fractional-pixel translation at 1:1.
-        _offset = new SKPoint(
-            (float)(Math.Round((CanvasElement.ActualWidth - Bitmap.Width * _zoom) * dpi.DpiScaleX / 2) / dpi.DpiScaleX),
-            (float)(Math.Round((CanvasElement.ActualHeight - Bitmap.Height * _zoom) * dpi.DpiScaleY / 2) / dpi.DpiScaleY));
+        _zoom = GetActualPixelZoom(dpi);
+        _offset = CenterOffsetAligned(_zoom, dpi);
         _initialZoomApplied = true;
         UpdateZoomText();
         UpdateOverlayLayout();
@@ -410,16 +450,26 @@ public partial class EditorView : UserControl
         }
 
         var dpi = VisualTreeHelper.GetDpi(CanvasElement);
+        var scaleX = (float)dpi.DpiScaleX;
+        var scaleY = (float)dpi.DpiScaleY;
         var pixelZoom = _zoom * dpi.DpiScaleX;
-        var sampling = pixelZoom >= 1 - 0.0001
-            ? new SKSamplingOptions(SKFilterMode.Nearest, SKMipmapMode.None)
-            : new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear);
+        var isActualPixels = Math.Abs(pixelZoom - 1.0) < ActualPixelSnapEpsilon;
+        var sampling = SelectBitmapSampling(pixelZoom);
 
         canvas.Save();
-        // Keep input and WPF overlays in DIP; only the Skia rendering surface uses display pixels.
-        canvas.Scale((float)dpi.DpiScaleX, (float)dpi.DpiScaleY);
-        canvas.Translate(_offset.X, _offset.Y);
-        canvas.Scale(_zoom);
+        if (isActualPixels)
+        {
+            // Snap to integer display pixels and draw at exact 1:1 to avoid float drift and sub-pixel blur.
+            canvas.Translate(MathF.Round(_offset.X * scaleX), MathF.Round(_offset.Y * scaleY));
+        }
+        else
+        {
+            // Keep input and WPF overlays in DIP; only the Skia rendering surface uses display pixels.
+            canvas.Scale(scaleX, scaleY);
+            canvas.Translate(_offset.X, _offset.Y);
+            canvas.Scale(_zoom);
+        }
+
         canvas.DrawBitmap(Bitmap, 0, 0, sampling);
 
         canvas.Save();
@@ -764,7 +814,7 @@ public partial class EditorView : UserControl
         var position = e.GetPosition(CanvasElement);
         var imagePoint = ClampToImage(ToImage(position));
         var factor = e.Delta > 0 ? 1.12f : 1 / 1.12f;
-        var newZoom = Math.Clamp(_zoom * factor, 0.05f, 8f);
+        var newZoom = SnapZoomNearActualPixels(Math.Clamp(_zoom * factor, 0.05f, 8f));
         if (Math.Abs(newZoom - _zoom) < 0.0001f)
         {
             return;

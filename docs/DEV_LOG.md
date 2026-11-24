@@ -4,6 +4,33 @@
 
 ---
 
+## 2026-11-24 - 修正編輯器顯示圖片模糊（v1.34.4）
+
+### 目標
+
+修正擷取、剪貼簿貼上或開啟檔案載入的圖片在編輯器中顯示模糊的問題。
+
+### 變更
+
+- `App/Views/MainWindow.xaml`、`App/Views/EditorView.xaml`：
+  - 主視窗啟用 `UseLayoutRounding="True"`；`CanvasElement`（`SKElement`）加上 `UseLayoutRounding="True"`、`SnapsToDevicePixels="True"` 與 `RenderOptions.BitmapScalingMode="NearestNeighbor"`，避免 WPF 對 `SKElement` 的離屏 `WriteableBitmap` 做次像素偏移與雙線性重取樣模糊。
+- `App/Views/EditorView.xaml.cs`：
+  - 預設縮放與 `FitCanvas` 改以實際像素 1:1（`1 / DpiScaleX`）為上限，小圖直接 1:1 原始像素顯示、大圖再依畫布尺寸縮放，並將偏移對齊實體像素。
+  - `OnPaintSurface` 於 1:1 實際像素時將實體像素偏移取整並以 1.0 倍直接繪製，避免平移後的次像素位移與浮點誤差；0.5×～2.0×（非 1:1）改採 `SKCubicResampler.CatmullRom` 取代會混入 0.5× mipmap 的 `Linear + MipmapMode.Linear`，大幅提升縮放銳利度；≥2.0× 維持 `Nearest`。
+  - 滾輪與鍵盤縮放接近 1:1 實際像素時自動吸附至 1:1。
+- `Directory.Build.props`：版本更新為 1.34.4。
+
+### 問題與解法
+
+- `MainWindow` 與 `SKElement` 未啟用 `UseLayoutRounding` 且 WPF 預設 `BitmapScalingMode` 為雙線性，高 DPI 下 `SKElement` 位於非整數實體像素座標時整個畫布會被 WPF 二次模糊。
+- 舊版 `DefaultZoom = 0.8f` 在 100% DPI 會直接縮小到 80% 並以 `Linear + MipmapMode.Linear` 混入 0.5× mipmap 導致文字與介面糊掉；在 150%/200% DPI 則會非整數放大。改為依 `DpiScale` 以 1:1 實體像素為上限並對齊像素格即可解決。
+
+### 待辦
+
+- 需在 100%／125%／150% DPI 實機確認一般擷圖、剪貼簿圖片與大圖縮放的清晰度。
+
+---
+
 ## 2026-11-21 - 顯示名稱改為「Clippings 剪貼簿」（v1.34.3）
 
 ### 目標

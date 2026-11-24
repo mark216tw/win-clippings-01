@@ -10,6 +10,7 @@
         Background="{DynamicResource AppBackgroundBrush}"
         Icon="/Assets/clippings.ico"
         WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True"
         Loaded="OnLoaded"
         SourceInitialized="OnSourceInitialized"
         Closed="OnClosed"

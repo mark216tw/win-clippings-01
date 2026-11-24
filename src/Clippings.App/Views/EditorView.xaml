@@ -451,6 +451,9 @@
             <Grid x:Name="CanvasHost">
                 <skia:SKElement x:Name="CanvasElement"
                                 IgnorePixelScaling="False"
+                                UseLayoutRounding="True"
+                                SnapsToDevicePixels="True"
+                                RenderOptions.BitmapScalingMode="NearestNeighbor"
                                 PaintSurface="OnPaintSurface"
                                 MouseWheel="OnCanvasMouseWheel"
                                  MouseDown="OnCanvasMouseDown"

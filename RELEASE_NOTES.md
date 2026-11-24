@@ -1,3 +1,26 @@
+# Clippings 剪貼簿 1.34.4
+
+## 編輯器顯示更清晰
+
+- 修正擷取、剪貼簿貼上與開啟檔案載入的圖片在編輯器中顯示模糊的問題。
+- 圖片改以實際像素 1:1 顯示，小圖不再被強制縮小；大圖才依可用空間縮放。
+- 畫布位置對齊實體像素，避免高 DPI 下的次像素位移與二次模糊。
+- 調整縮放取樣方式，放大檢視與縮放後仍保有銳利細節；接近 1:1 時會自動吸附回原始像素。
+
+## 下載
+
+- `win-x64`：適用 Intel 或 AMD 64 位元 Windows 電腦。
+- `win-arm64`：適用 ARM64 Windows 電腦。
+
+僅提供 framework-dependent ZIP，請解壓縮後使用。需安裝 [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0)；解壓縮後執行 `Clippings.App.New.exe`。
+
+## SHA-256
+
+- `Clippings-1.34.4-win-x64-framework-dependent.zip`：`F9B944FB9EFAF8D2A1DAB6A1CEACDD6B9BBFC9FAA8701064CD1DC2993C94067A`
+- `Clippings-1.34.4-win-arm64-framework-dependent.zip`：`9654D5BA1476EFD08664453D6CDF31FE70D1598738527E27129AFBEDBA4F8946`
+
+---
+
 # Clippings 剪貼簿 1.34.3
 
 ## 顯示名稱調整
